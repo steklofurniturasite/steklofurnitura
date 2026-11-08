@@ -7,8 +7,11 @@ OUT=ROOT/'dist/media';OUT.mkdir(exist_ok=True)
 mapping_file=ROOT/'research/media-map.json'
 mapping=json.loads(mapping_file.read_text()) if mapping_file.exists() else {}
 urls=json.loads((ROOT/'research/asset-urls.json').read_text())
+external_file=ROOT/'research/external-documents.json'
+external_documents=set(json.loads(external_file.read_text())) if external_file.exists() else set()
 
 def run(u):
+    if u in external_documents:return u,u,None
     if u in mapping and (ROOT/'dist'/mapping[u].lstrip('/')).exists():return u,mapping[u],None
     sha=hashlib.sha256(u.encode()).hexdigest()[:24]
     ext=pathlib.Path(urllib.parse.urlparse(u).path).suffix.lower()
