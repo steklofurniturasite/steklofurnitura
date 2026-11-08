@@ -1,0 +1,19 @@
+{
+  "checks": {
+    "source routes": 1639,
+    "information text": 324,
+    "product fields": 4276,
+    "product descriptions": 4499,
+    "page headings": 1641,
+    "script isolation": 1641,
+    "product index routes": 1463,
+    "stock extraction": 1463,
+    "all internal links": 1,
+    "contacts": 9
+  },
+  "failures": [],
+  "source_records": 1642,
+  "products": 1463,
+  "images_referenced": 17888,
+  "missing_targets": {}
+}
