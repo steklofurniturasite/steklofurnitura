@@ -1,0 +1,13 @@
+User-agent: * 
+Disallow: /manager/ 
+Disallow: /assets/components/ 
+Allow:/*.css
+Allow:/*.js
+Disallow: /core/ 
+Disallow: /connectors/ 
+Disallow: /index.php 
+Disallow: *?
+
+Host: www.steklofurnitura.by
+
+Sitemap: http://www.steklofurnitura.by/sitemap.xml

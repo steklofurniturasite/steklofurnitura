@@ -1,0 +1,122 @@
+[
+  {
+    "path": "/catalog/sistemy-razdvizhnyh-dverej1/dormakaba/muto-comfort-xl-150/komplekt-aksessuarov-xl-bez-dovodchika/",
+    "references": 8,
+    "example": "catalog/rasprodazha-furnituryi.html"
+  },
+  {
+    "path": "/catalog/sistemy-razdvizhnyh-dverej1/dormakaba/muto-comfort-xl-150/napravlyayushhaya-kreplenie-k-stene-36.453/",
+    "references": 8,
+    "example": "catalog/rasprodazha-furnituryi.html"
+  },
+  {
+    "path": "/catalog/sistemy-razdvizhnyh-dverej1/dormakaba/muto-comfort-xl-150/perednyaya-kryishka-36.457/",
+    "references": 8,
+    "example": "catalog/rasprodazha-furnituryi.html"
+  },
+  {
+    "path": "/catalog/sistemy-razdvizhnyh-dverej1/dormakaba/muto-comfort-m-60/komplekt-m-na-potolok-(1450mm)/",
+    "references": 6,
+    "example": "catalog/sistemy-razdvizhnyh-dverej1/index.html"
+  },
+  {
+    "path": "/catalog/sistemy-razdvizhnyh-dverej1/dormakaba/muto-comfort-l-80-dormotion/comfort-l-36349/",
+    "references": 6,
+    "example": "catalog/sistemy-razdvizhnyh-dverej1/index.html"
+  },
+  {
+    "path": "/catalog/sistemy-razdvizhnyh-dverej1/dormakaba/muto-comfort-l-80-dormotion/comfort-l-36350/",
+    "references": 6,
+    "example": "catalog/sistemy-razdvizhnyh-dverej1/index.html"
+  },
+  {
+    "path": "/catalog/sistemy-razdvizhnyh-dverej1/dormakaba/muto-comfort-l-80-dormotion/comfort-l-36352/",
+    "references": 6,
+    "example": "catalog/sistemy-razdvizhnyh-dverej1/index.html"
+  },
+  {
+    "path": "/catalog/sistemy-razdvizhnyh-dverej1/dormakaba/muto-comfort-l-80-dormotion/comfort-l-36359/",
+    "references": 6,
+    "example": "catalog/sistemy-razdvizhnyh-dverej1/index.html"
+  },
+  {
+    "path": "/catalog/sistemy-razdvizhnyh-dverej1/dormakaba/muto-comfort-l-80-dormotion/comfort-l-36271/",
+    "references": 6,
+    "example": "catalog/sistemy-razdvizhnyh-dverej1/index.html"
+  },
+  {
+    "path": "/catalog/sistemy-razdvizhnyh-dverej1/dormakaba/muto-comfort-xl-150-dormotion/comfort-xl-36556/",
+    "references": 4,
+    "example": "catalog/sistemy-razdvizhnyh-dverej1/index.html"
+  },
+  {
+    "path": "/catalog/sistemy-razdvizhnyh-dverej1/dormakaba/muto-comfort-l-80-dormotion/comfort-l-36800/",
+    "references": 6,
+    "example": "catalog/sistemy-razdvizhnyh-dverej1/index.html"
+  },
+  {
+    "path": "/catalog/sistemy-razdvizhnyh-dverej1/dormakaba/muto-comfort-l-80-dormotion/comfort-l-36802/",
+    "references": 6,
+    "example": "catalog/sistemy-razdvizhnyh-dverej1/index.html"
+  },
+  {
+    "path": "/catalog/sistemy-razdvizhnyh-dverej1/dormakaba/muto-comfort-l-80-dormotion/comfort-l-36354/",
+    "references": 6,
+    "example": "catalog/sistemy-razdvizhnyh-dverej1/index.html"
+  },
+  {
+    "path": "/catalog/furnitura-dlya-steklyannyh-ograzhdenij/titan/profil-dlya-steklyannyh-ograzhdenij/sxema-krepleniya-profilya-t-102.html",
+    "references": 2,
+    "example": "catalog/furnitura-dlya-steklyannyh-ograzhdenij/titan/profil-dlya-steklyannyh-ograzhdenij/profil-anod-dlya-steklyannyh-ograzhdeniy.html"
+  },
+  {
+    "path": "/catalog/spajdery-i-furnitura-dlya-kozyrkov1/titan/spajdery1/variantyi-krepleniya-spajdernoj-sistemyi.html",
+    "references": 19,
+    "example": "catalog/spajdery-i-furnitura-dlya-kozyrkov1/titan/spajdery1/ls-200-2b-spajder-chetyirexlapyij-s-rebrom-zhestkosti.html"
+  },
+  {
+    "path": "/catalog/dvernye-dovodchiki/dormakaba/podbor-usiliya-dovodchika-v-zavisimosti-ot-shiriny-i-vesa-dveri.html",
+    "references": 45,
+    "example": "catalog/dvernye-dovodchiki/dormakaba/napolnye-dovodchiki-bts/dovodchik-bts65-en-4-90˚-en4.html"
+  },
+  {
+    "path": "/catalog/konnektory-dlya-krepleniya-stekla/stif-glass/seriya-sm1/shema-sm-510.html",
+    "references": 4,
+    "example": "catalog/konnektory-dlya-krepleniya-stekla/stif-glass/seriya-sm1/sm-510-60-2-sss-konnektor-steklo-steklo.html"
+  },
+  {
+    "path": "/catalog/titan/furnitura-dlya-dushevyh-kabin/profil-uplotnitelnyj/t-210-profil-dlya-stekla-8-mm.html",
+    "references": 1,
+    "example": "catalog/furnitura-dlya-dushevyix-kabin/titan/profil-uplotnitelnyj/bokovoy-profil-dlya-dushevyh-anod.html"
+  },
+  {
+    "path": "/articles/shemy-standartnyh-konstrukcij.html",
+    "references": 1,
+    "example": "catalog/sistemy-mayatnikovyh-dverej/stif-glass/seriya-su/index.html"
+  },
+  {
+    "path": "/catalog/sistemy-razdvizhnyh-dverej1/titan/seriya-slajder/sxemyi-krepleniya-razdvizhnoj-sistemyi-t-700-delta.html",
+    "references": 1,
+    "example": "catalog/sistemy-razdvizhnyh-dverej1/titan/seriya-slajder/komplekt-dlya-razdvizhnoy-sistemy-delta.html"
+  },
+  {
+    "path": "/assets/images/sp-slide/SP-800 видео монтажа (без лого).mp4",
+    "references": 2,
+    "example": "catalog/sistemy-razdvizhnyh-dverej1/stif-glass/seriya-sp/treki-i-kryshka-dlya-teleskopicheskoj-sistemy.html"
+  },
+  {
+    "path": "/catalog/sistemy-razdvizhnyh-dverej1/stif-glass/seriya-sm2/karetka-ploskaya-sm-501-shema.html",
+    "references": 1,
+    "example": "catalog/sistemy-razdvizhnyh-dverej1/stif-glass/seriya-sm2/sm-501-2-sss-karetka-ploskaya-bez-zenkovki.html"
+  },
+  {
+    "path": "/catalog/sistemy-razdvizhnyh-dverej1/stif-glass/seriya-sm2/karetka-zilindr-sm-501.-shema.html",
+    "references": 1,
+    "example": "catalog/sistemy-razdvizhnyh-dverej1/stif-glass/seriya-sm2/sm-501a-2-sss-karetka-tsilindricheskaya-bez-zenkovki.html"
+  },
+  {
+    "path": "/catalog/furnitura-dlya-mezhkomnatnyh-dverej/titan/alyuminievye-dvernye-korobki1/sxema-dvernoj-korobki-ti-804.html",
+    "references": 2,
+    "example": "catalog/furnitura-dlya-mezhkomnatnyh-dverej/titan/alyuminievye-dvernye-korobki1/ti-804l-komplekt-dvernoy-korobki-levyy.html"
+  }
+]
