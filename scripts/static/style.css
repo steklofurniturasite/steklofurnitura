@@ -832,3 +832,7 @@ a.product-main-image { cursor: zoom-in; }
   body { color: black; background: white; font-size: 11pt; }
   a { color: inherit; }
 }
+
+/* Snapshot values are informational until confirmed by a manager. */
+.price-note{display:block;font-size:.75rem;line-height:1.45;font-weight:400;color:var(--muted,#62676c);margin-top:.35rem}
+.product-stock{color:var(--muted,#62676c)}

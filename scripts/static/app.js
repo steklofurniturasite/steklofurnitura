@@ -292,11 +292,11 @@
     const p = Object.fromEntries(Object.entries(product).map(([key, value]) => [key, escapeHTML(value)]));
     return `<article class="product-card">
       <a class="product-photo" href="${p.url}"><img src="${p.image}" alt="${p.name}" loading="lazy">
-        ${p.oldPrice ? '<span class="sale-label">Распродажа</span>' : ''}</a>
+        </a>
       <div class="product-content"><span class="product-article">${p.article}</span>
         <h3><a href="${p.url}">${p.name}</a></h3><p class="finish">${p.finish}</p>
-        <div class="product-stock">${p.stock ? '<i aria-hidden="true"></i>' + p.stock : ''}</div>
-        <div class="product-bottom"><span class="product-price">${p.oldPrice ? '<s>' + p.oldPrice + '</s>' : ''}${p.price || 'Цену уточняйте'}</span>
+        <div class="product-stock">Наличие уточняется</div>
+        <div class="product-bottom"><span class="product-price">${p.price || 'Цену уточняйте'}<small class="price-note">Стоимость подтвердит менеджер</small></span>
           <button class="add-product" type="button" data-product="${p.url}" aria-label="Добавить ${p.article} в заявку">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
           </button></div>
@@ -375,8 +375,11 @@
     }
   }
 
-  function originalProductPath(url) {
-    return siteBase && url.startsWith(`${siteBase}/`) ? url.slice(siteBase.length) : url;
+  function publicProductURL(product) {
+    // route is canonical catalogue data; url is the deployment-specific navigation path.
+    const route = product.route || (siteBase && product.url.startsWith(`${siteBase}/`)
+      ? product.url.slice(siteBase.length) : product.url);
+    return new URL(`${siteBase}${route}`, location.origin).href;
   }
 
   function inquiryText() {
@@ -384,7 +387,7 @@
     return ['Здравствуйте! Прошу уточнить стоимость и наличие фурнитуры.', '',
       ...getCart().map((item, index) => {
         const product = productMap.get(item.url);
-        return product ? `${index + 1}. ${product.name}\nАрт.: ${product.article}\nОтделка: ${product.finish}\nКоличество: ${item.qty} ${product.unit || 'шт.'}\nСсылка: https://www.steklofurnitura.by${originalProductPath(product.url)}` : '';
+        return product ? `${index + 1}. ${product.name}\nАрт.: ${product.article}\nОтделка: ${product.finish}\nКоличество: ${item.qty} ${product.unit || 'шт.'}\nСсылка: ${publicProductURL(product)}` : '';
       }), '', `Имя: ${fields.get('name')}`, `Телефон: ${fields.get('phone')}`,
       `Комментарий: ${fields.get('comment') || ''}`].join('\n');
   }

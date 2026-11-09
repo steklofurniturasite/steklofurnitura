@@ -1,5 +1,6 @@
 """Copy the static site and adapt local URLs for a GitHub Pages project path."""
 import argparse
+import json
 from pathlib import Path
 import re
 import shutil
@@ -19,6 +20,15 @@ if out.exists():
 shutil.copytree(source, out)
 for path in out.rglob('*'):
     if path.suffix not in {'.html', '.css', '.js', '.json'}:
+        continue
+    if path.name == 'products.json':
+        products = json.loads(path.read_text(encoding='utf-8'))
+        for product in products:
+            for key in ('url', 'image'):
+                value = product.get(key, '')
+                if value.startswith('/') and not value.startswith('//'):
+                    product[key] = base + value
+        path.write_text(json.dumps(products, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
         continue
     text = path.read_text(encoding='utf-8')
     text = re.sub(r'''(["'`])/(?!/)''', lambda m: m[1] + base + '/', text)
