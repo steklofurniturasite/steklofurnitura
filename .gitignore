@@ -4,3 +4,5 @@ research/__pycache__/
 __pycache__/
 *.tar.gz
 node_modules/
+
+.github-pages/
