@@ -46,7 +46,13 @@ const assert=require('node:assert/strict');
   // Check desktop and mobile styles at representative sizes.
   for(const width of [375,1440]){
    await page.setViewportSize({width,height:850});
-   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1));
+   await page.goto(origin+base+'/');
+   const metrics=await page.evaluate(()=>({
+     viewport:window.innerWidth,
+     document:document.documentElement.scrollWidth
+   }));
+   console.log('Motion responsive layout',width,metrics);
+   assert(metrics.document<=metrics.viewport+1, 'overflow at '+width+'px');
   }
   assert.deepEqual(errors,[]);
   console.log('PASS: motion menus, rapid interruption, keyboard, reduced-motion, layouts');
