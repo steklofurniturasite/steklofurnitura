@@ -1,0 +1,15 @@
+{
+  "base_commit": "8ce51cf12b32ef252d09e55e7cb8fc9b08d78cfb",
+  "checks": {
+    "product count": 1,
+    "unique products": 1,
+    "complete product data": 1463,
+    "HTML count": 1,
+    "original routes": 1641,
+    "original images": 1641,
+    "original document links": 1641,
+    "replaced hero preserved in gallery": 1,
+    "static source copied": 2
+  },
+  "failures": []
+}

@@ -1,0 +1,143 @@
+[
+  {
+    "width": 390,
+    "label": "home",
+    "scrollWidth": 390,
+    "viewport": 390,
+    "about": "Надёжная основа ваших проектов",
+    "resource": [
+      {
+        "text": "Стандартные конструкции",
+        "w": 139,
+        "scroll": 139
+      },
+      {
+        "text": "Статьи",
+        "w": 139,
+        "scroll": 139
+      },
+      {
+        "text": "Документы",
+        "w": 139,
+        "scroll": 139
+      },
+      {
+        "text": "Видеоруководства",
+        "w": 139,
+        "scroll": 139
+      }
+    ],
+    "button": null,
+    "broken": []
+  },
+  {
+    "width": 320,
+    "label": "home",
+    "scrollWidth": 320,
+    "viewport": 320,
+    "about": "Надёжная основа ваших проектов",
+    "resource": [
+      {
+        "text": "Стандартные конструкции",
+        "w": 254,
+        "scroll": 254
+      },
+      {
+        "text": "Статьи",
+        "w": 254,
+        "scroll": 254
+      },
+      {
+        "text": "Документы",
+        "w": 254,
+        "scroll": 254
+      },
+      {
+        "text": "Видеоруководства",
+        "w": 254,
+        "scroll": 254
+      }
+    ],
+    "button": null,
+    "broken": []
+  },
+  {
+    "width": 320,
+    "label": "product",
+    "scrollWidth": 320,
+    "viewport": 320,
+    "resource": [],
+    "button": {
+      "w": 138,
+      "h": 48,
+      "lines": 1,
+      "whiteSpace": "nowrap"
+    },
+    "guarantee": "<span><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" aria-hidden=\"true\"><path d=\"m5 12 4 4L19 6\"></path></svg>12 месяцев гарантии</span><span><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" aria-hidden=\"true\"><path d=\"m5 12 4 4L19 6\"></path></svg>Доставка по Беларуси</span>",
+    "broken": []
+  },
+  {
+    "width": 320,
+    "label": "longest-name",
+    "scrollWidth": 320,
+    "viewport": 320,
+    "resource": [],
+    "button": {
+      "w": 138,
+      "h": 48,
+      "lines": 1,
+      "whiteSpace": "nowrap"
+    },
+    "guarantee": "<span><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" aria-hidden=\"true\"><path d=\"m5 12 4 4L19 6\"></path></svg>12 месяцев гарантии</span><span><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" aria-hidden=\"true\"><path d=\"m5 12 4 4L19 6\"></path></svg>Доставка по Беларуси</span>",
+    "broken": []
+  },
+  {
+    "width": 390,
+    "label": "contacts",
+    "scrollWidth": 390,
+    "viewport": 390,
+    "resource": [],
+    "button": null,
+    "broken": []
+  },
+  {
+    "width": 1440,
+    "label": "contacts",
+    "scrollWidth": 1440,
+    "viewport": 1440,
+    "resource": [],
+    "button": null,
+    "broken": []
+  },
+  {
+    "width": 1440,
+    "label": "home",
+    "scrollWidth": 1440,
+    "viewport": 1440,
+    "about": "Надёжная основа\nваших проектов",
+    "resource": [
+      {
+        "text": "Стандартные конструкции",
+        "w": 249,
+        "scroll": 249
+      },
+      {
+        "text": "Статьи",
+        "w": 249,
+        "scroll": 249
+      },
+      {
+        "text": "Документы",
+        "w": 249,
+        "scroll": 249
+      },
+      {
+        "text": "Видеоруководства",
+        "w": 249,
+        "scroll": 249
+      }
+    ],
+    "button": null,
+    "broken": []
+  }
+]

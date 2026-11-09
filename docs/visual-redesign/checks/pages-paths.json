@@ -1,0 +1,10 @@
+{
+  "checks": {
+    "local URL targets": 130720,
+    "product index targets": 2926
+  },
+  "missing": {},
+  "outside_project_path": {},
+  "packaged_bytes": 250919349,
+  "under_256_MiB": true
+}

@@ -1,7 +1,8 @@
 """Generate the redesigned static site from the verified source snapshot."""
 from __future__ import annotations
-import copy, gzip, hashlib, html as escape, json, pathlib, re, urllib.parse
+import copy, gzip, hashlib, html as escape, json, pathlib, re, shutil, urllib.parse
 from lxml import html, etree
+from functools import lru_cache
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 if not (ROOT/'research/pages').exists() and (ROOT/'research/source-snapshot.json.gz').exists():
@@ -12,6 +13,13 @@ if not (ROOT/'research/pages').exists() and (ROOT/'research/source-snapshot.json
             destination.write_text(content,encoding='utf8')
 DIST=ROOT/'dist'; DIST.mkdir(exist_ok=True)
 BASE='https://www.steklofurnitura.by/'
+STATIC=ROOT/'scripts/static'
+
+@lru_cache(maxsize=2)
+def static_version(name):
+    path=STATIC/name
+    return hashlib.sha256(path.read_bytes()).hexdigest()[:12] if path.exists() else 'premium-2'
+
 ALIASES={
     '/articles/shemy-standartnyh-konstrukcij.html':'/info/standartnye-konstrukcii/',
     '/catalog/titan/furnitura-dlya-dushevyh-kabin/profil-uplotnitelnyj/t-210-profil-dlya-stekla-8-mm.html':'/catalog/furnitura-dlya-dushevyix-kabin/titan/profil-uplotnitelnyj/t-210-8mm-belyij-l2500mm-profil-magnitnyij-90°.html',
@@ -62,20 +70,20 @@ def header(active=''):
     catlinks=''.join(f'<a href="{esc(x["url"])}">{esc(x["name"])}{icon("arrow")}</a>' for x in menu)
     return f'''<a class="skip" href="#main">К содержимому</a>
     <div class="topbar"><div class="wrap"><span>Фурнитура для стекла и стеклянных конструкций</span><a href="/contacts.html">Минск, пр-т Независимости, 177 {icon('pin')}</a><span>Пн–Чт 09:00–18:00 · Пт 09:00–17:00</span></div></div>
-    <header><div class="wrap header-main"><a class="logo" href="/" aria-label="Стеклофурнитура — главная"><img src="{asset('/template/image/logo2.png')}" alt="Стеклофурнитура"><span class="logo-type">СТЕКЛО<br><b>ФУРНИТУРА</b></span></a>
+    <header><div class="wrap header-main"><a class="logo" href="/" aria-label="Стеклофурнитура — главная"><img src="{asset('/template/image/logo2.png')}" alt="Стеклофурнитура"><span class="logo-type">СТЕКЛО<br> <b>ФУРНИТУРА</b></span></a>
     <button class="button catalog-button" data-toggle="catalog-menu" aria-expanded="false" aria-controls="catalog-menu">{icon('menu')}<span>Каталог продукции</span></button>
-    <form class="search" action="/search.html" role="search"><input name="q" aria-label="Поиск по каталогу" placeholder="Название товара или артикул"><button aria-label="Найти">{icon('search')}</button></form>
+    <form class="search" action="/search.html" role="search"><input type="search" name="q" aria-label="Поиск по каталогу" placeholder="Название товара или артикул"><button aria-label="Найти">{icon('search')}</button></form>
     <div class="header-phone"><a href="tel:+375296335155">+375 (29) 633-51-55</a><span>Назар · юр. лица и опт</span></div>
-    <a class="cart-link" href="/system/cart.html" aria-label="Ваш заказ">{icon('bag')}<span class="cart-count">0</span></a><button class="mobile-menu icon-btn" data-toggle="mobile-nav" aria-label="Открыть меню" aria-expanded="false">{icon('menu')}</button></div>
+    <a class="cart-link" href="/system/cart.html" aria-label="Перейти к заявке">{icon('bag')}<span class="cart-count">0</span></a><button class="mobile-menu icon-btn" data-toggle="mobile-nav" aria-label="Открыть меню" aria-expanded="false" aria-controls="mobile-nav">{icon('menu')}</button></div>
     <nav class="wrap desktop-nav" aria-label="Основная навигация">{''.join(f'<a class="{"active" if active==u else ""}" href="{u}">{n}</a>' for n,u in nav)}<a class="pdf-link" href="{asset('/assets/catalog/Catalog SG 2023.pdf')}" target="_blank" rel="noopener">{icon('download')} Каталог 2023</a></nav>
     <div class="catalog-menu wrap" id="catalog-menu" hidden><div class="menu-heading"><span>Каталог продукции</span><button class="icon-btn" data-toggle="catalog-menu" aria-label="Закрыть каталог">{icon('close')}</button></div><div class="menu-grid">{catlinks}</div></div>
-    <nav id="mobile-nav" class="mobile-nav" hidden>{''.join(f'<a href="{u}">{n}</a>' for n,u in [('Каталог продукции','/catalog.html'),('Поиск по каталогу','/search.html')]+nav+info_nav)}<a href="tel:+375296335120">Виктория: +375 (29) 633-51-20</a></nav></header>'''
+    <nav id="mobile-nav" class="mobile-nav" aria-label="Мобильная навигация" hidden>{''.join(f'<a href="{u}">{n}</a>' for n,u in [('Каталог продукции','/catalog.html'),('Поиск по каталогу','/search.html')]+nav+info_nav)}<a href="tel:+375296335120">Виктория: +375 (29) 633-51-20</a></nav></header>'''
 
 def footer():
-    return f'''<footer><div class="wrap footer-grid"><div><a href="/" class="footer-brand">СТЕКЛО<span>ФУРНИТУРА</span></a><p>Фурнитура и крепления для стекла<br>и стеклянных конструкций.</p><a class="footer-download" href="{asset('/assets/catalog/Catalog SG 2023.pdf')}" target="_blank" rel="noopener">Скачать каталог 2023 {icon('download')}</a></div><div><h3>Компания</h3>{''.join(f'<a href="{u}">{n}</a>' for n,u in nav)}</div><div><h3>Полезная информация</h3>{''.join(f'<a href="{u}">{n}</a>' for n,u in info_nav)}</div><div><h3>Связаться с нами</h3><a class="footer-tel" href="tel:+375296335155">+375 (29) 633-51-55</a><span>Назар · юр. лица и опт</span><a href="mailto:steklofurnitura@mail.ru">steklofurnitura@mail.ru</a><a class="footer-tel" href="tel:+375296335120">+375 (29) 633-51-20</a><span>Виктория · физические лица</span><a href="mailto:steklofurnitura@gmail.com">steklofurnitura@gmail.com</a><a href="tel:+375173949470">+375 (17) 394-94-70 (71,72)</a></div></div><div class="wrap footer-bottom"><span>© 2009-2026, ООО «Стеклофурнитура»</span><span>Сайт не является интернет-магазином</span><a href="https://www.instagram.com/steklofurnitura/" target="_blank" rel="noopener">Instagram {icon('up')}</a></div></footer><div class="toast" role="status" hidden></div>'''
+    return f'''<footer><div class="wrap footer-grid"><div><a href="/" class="footer-brand">СТЕКЛО<span>ФУРНИТУРА</span></a><p>Фурнитура и крепления для стекла<br> и стеклянных конструкций.</p><a class="footer-download" href="{asset('/assets/catalog/Catalog SG 2023.pdf')}" target="_blank" rel="noopener">Скачать каталог 2023 {icon('download')}</a></div><div><h3>Компания</h3>{''.join(f'<a href="{u}">{n}</a>' for n,u in nav)}</div><div><h3>Полезная информация</h3>{''.join(f'<a href="{u}">{n}</a>' for n,u in info_nav)}</div><div><h3>Связаться с нами</h3><a class="footer-tel" href="tel:+375296335155">+375 (29) 633-51-55</a><span>Назар · юр. лица и опт</span><a href="mailto:steklofurnitura@mail.ru">steklofurnitura@mail.ru</a><a class="footer-tel" href="tel:+375296335120">+375 (29) 633-51-20</a><span>Виктория · физические лица</span><a href="mailto:steklofurnitura@gmail.com">steklofurnitura@gmail.com</a><a href="tel:+375173949470">+375 (17) 394-94-70 (71,72)</a></div></div><div class="wrap footer-bottom"><span>© 2009-2026, ООО «Стеклофурнитура»</span><span>Сайт не является интернет-магазином</span><a href="https://www.instagram.com/steklofurnitura/" target="_blank" rel="noopener">Instagram {icon('up')}</a></div></footer><div class="toast" role="status" aria-live="polite" hidden></div>'''
 
 def shell(title,body,active='',desc=''):
-    return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="{esc(desc or 'ООО «Стеклофурнитура». Фурнитура для стекла DORMA, ТИТАН, HAG, StifGlass. Каталог, проекты и контакты в Минске.')} "><meta name="theme-color" content="#c94b08"><title>{esc(title)} — Стеклофурнитура</title><link rel="stylesheet" href="/style.css?v=orange-1"><script src="/app.js" defer></script></head><body>{header(active)}<main id="main">{body}</main>{footer()}</body></html>'''
+    return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="{esc(desc or 'ООО «Стеклофурнитура». Фурнитура для стекла DORMA, ТИТАН, HAG, StifGlass. Каталог, проекты и контакты в Минске.')} "><meta name="theme-color" content="#c54908"><title>{esc(title)} — Стеклофурнитура</title><link rel="stylesheet" href="/style.css?v={static_version('style.css')}"><script src="/app.js?v={static_version('app.js')}" defer></script></head><body>{header(active)}<main id="main">{body}</main>{footer()}</body></html>'''
 
 def clean(el):
     el=copy.deepcopy(el)
@@ -106,6 +114,12 @@ def clean(el):
             src=e.get('src','')
             if src.startswith('//'):e.set('src','https:'+src)
             e.set('loading','lazy');e.set('title',e.get('title') or 'Видеоруководство')
+    for table in el.xpath('.//table'):
+        if 'layout-table' in table.get('class','').split():continue
+        parent=table.getparent()
+        if parent is None:continue
+        container=etree.Element('div',{'class':'table-scroll','role':'region','aria-label':'Таблица: технические сведения','tabindex':'0'})
+        parent.replace(table,container);container.append(table)
     return html.tostring(el,encoding='unicode')
 
 def get_input(el,pattern):
@@ -126,7 +140,7 @@ def product_card(p):
     return f'''<article class="product-card"><a class="product-photo" href="{esc(p['url'])}"><img src="{image}" alt="{esc(p['name'])}" loading="lazy">{('<span class="sale-label">Распродажа</span>' if p.get('oldPrice') else '')}</a><div class="product-content"><span class="product-article">{esc(p['article'])}</span><h3><a href="{esc(p['url'])}">{esc(p['name'])}</a></h3><p class="finish">{esc(p['finish'])}</p><div class="product-stock">{('<i></i>'+esc(stock)) if stock else ''}</div><div class="product-bottom"><span class="product-price">{('<s>'+esc(p['oldPrice'])+'</s>') if p.get('oldPrice') else ''}{esc(p.get('price') or 'Цену уточняйте')}</span><button class="add-product" data-product="{esc(p['url'])}" aria-label="Добавить {esc(p['article'])} в заявку">{icon('plus')}</button></div></div></article>'''
 
 def breadcrumb(crumbs):
-    return '<nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/">Главная</a>'+''.join(f'<span>/</span><a href="{esc(u)}">{esc(n)}</a>' for n,u in crumbs)+'</nav>'
+    return '<nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/">Главная</a>'+''.join(f'<span aria-hidden="true">/</span>'+ (f'<span aria-current="page">{esc(n)}</span>' if i==len(crumbs)-1 else f'<a href="{esc(u)}">{esc(n)}</a>') for i,(n,u) in enumerate(crumbs))+'</nav>'
 def page_title(title,kicker='',sub=''):
     return f'<div class="page-title">{("<span class=eyebrow>"+esc(kicker)+"</span>") if kicker else ""}<h1>{esc(title)}</h1>{("<p>"+esc(sub)+"</p>") if sub else ""}</div>'
 
@@ -153,12 +167,12 @@ def home_page():
     for p in rec:products.setdefault(p['url'],p)
     brands=''.join(f'<img src="{asset(src)}" alt="{esc(name)}" loading="lazy">' for src,name in [('/assets/images/brand/brand-large1.png','StifGlass'),('/assets/images/brand/dormakaba logo.jpg','dormakaba'),('/assets/images/brand/brand-large3.png','Titan'),('/assets/images/brand/HAG logo.png','HAG')])
     company=clean(first(xp(home,'main-content')))
-    return f'''<section class="hero wrap"><div class="hero-copy"><span class="eyebrow"><i></i> СТЕКЛОФУРНИТУРА · РАБОТАЕМ С 2009 ГОДА</span><h1>Фурнитура для<br><span>стеклянных</span><br>конструкций<span class="accent-dot">.</span></h1><p>Крепления и фурнитура для стекла<br>DORMA, ТИТАН, HAG, STIFGLASS.</p><div class="hero-buttons"><a href="/catalog.html" class="button">Перейти в каталог {icon('arrow')}</a><a href="/gallery.html" class="text-link">Наши проекты {icon('up')}</a></div><div class="hero-stats"><div><strong>1000<span>+</span></strong><p>наименований на складе</p></div><div><strong>12 <small>месяцев</small></strong><p>гарантии на продукцию</p></div></div></div><div class="hero-visual"><img class="hero-photo" src="{asset('assets/images/photo_objects/galileo-1.jpg')}" alt="Стеклянный козырёк главного входа ТРЦ Галилео в Минске"><span class="hero-corner">СТЕКЛО. МЕТАЛЛ. ВОЗМОЖНОСТИ.</span><a class="hero-caption" href="/gallery.html#project-8"><span><small>ПРОЕКТЫ С НАШЕЙ ФУРНИТУРОЙ</small>ТРЦ «Галилео», Минск</span>{icon('up')}</a></div></section>
-    <section class="brands wrap"><span>Проверенные бренды.<br>Продуманные решения.</span><div>{brands}</div></section>
+    return f'''<section class="hero wrap"><div class="hero-copy"><span class="eyebrow"><i></i> СТЕКЛОФУРНИТУРА · РАБОТАЕМ С 2009 ГОДА</span><h1>Фурнитура для<br> <span>стеклянных</span><br> конструкций<span class="accent-dot">.</span></h1><p>Крепления и фурнитура для стекла<br> DORMA, ТИТАН, HAG, STIFGLASS.</p><div class="hero-buttons"><a href="/catalog.html" class="button">Перейти в каталог {icon('arrow')}</a><a href="/gallery.html" class="text-link">Наши проекты {icon('up')}</a></div><p class="hero-note">Для душевых, дверей, перегородок и стеклянных ограждений.</p><div class="hero-stats"><div><strong>1000<span>+</span></strong><p>наименований на складе</p></div><div><strong>12 <small>месяцев</small></strong><p>гарантии на продукцию</p></div></div></div><div class="hero-visual"><img class="hero-photo" width="900" height="1200" fetchpriority="high" src="{asset('assets/images/photo_objects/dscn5234.jpg')}" alt="Стеклянный козырёк главного входа ТРЦ Галилео в Минске"><span class="hero-corner">СТЕКЛО. МЕТАЛЛ. ВОЗМОЖНОСТИ.</span><a class="hero-caption" href="/gallery.html#project-8"><span><small>ПРОЕКТЫ С НАШЕЙ ФУРНИТУРОЙ</small>ТРЦ «Галилео», Минск</span>{icon('up')}</a></div></section>
+    <section class="brands wrap"><span>Проверенные бренды.<br> Продуманные решения.</span><div>{brands}</div></section>
     <section class="section wrap" id="directions"><div class="section-heading"><div><span class="eyebrow">01 / КАТАЛОГ ПРОДУКЦИИ</span><h2>Всё для работы со стеклом</h2></div><a class="text-link" href="/catalog.html">Весь каталог {icon('up')}</a></div><div class="category-grid">{featured}</div><div class="category-rest">{extra}</div></section>
     <section class="products-section"><div class="wrap section"><div class="section-heading"><div><span class="eyebrow">02 / ПОДБОРКА</span><h2>Рекомендуем</h2></div><a class="text-link" href="/catalog/novinki.html">Новинки каталога {icon('up')}</a></div><div class="product-grid">{''.join(product_card(p) for p in rec)}</div></div></section>
-    <section class="section wrap"><div class="section-heading"><div><span class="eyebrow">03 / ГАЛЕРЕЯ ПРОЕКТОВ</span><h2>Детали, которые становятся<br>частью архитектуры</h2></div><a class="text-link" href="/gallery.html">Все проекты {icon('up')}</a></div><div class="projects-preview">{''.join(project_card(projects[i],i) for i in [3,4,5])}</div></section>
-    <section class="about-band"><div class="wrap"><div><span class="eyebrow">04 / О КОМПАНИИ</span><h2>Надёжная основа<br>ваших проектов</h2><a href="/info/o-kompanii.html" class="button button-light">О компании {icon('arrow')}</a></div><div><p>ООО «Стеклофурнитура» работает с 2009г. и имеет значительный опыт в продаже креплений и фурнитуры для различных стеклянных конструкций.</p><div class="advantages">{''.join(f'<a href="{esc(norm(a.get("href")))}">{icon("check")}<span>{esc(txt(a))}</span>{icon("up")}</a>' for a in home.xpath('//ul['+cls('advantages')+']//a'))}</div></div></div></section>
+    <section class="section wrap"><div class="section-heading"><div><span class="eyebrow">03 / ГАЛЕРЕЯ ПРОЕКТОВ</span><h2>Детали, которые становятся<br> частью архитектуры</h2></div><a class="text-link" href="/gallery.html">Все проекты {icon('up')}</a></div><div class="projects-preview">{''.join(project_card(projects[i],i) for i in [3,4,5])}</div></section>
+    <section class="about-band"><div class="wrap"><div><span class="eyebrow">04 / О КОМПАНИИ</span><h2>Надёжная основа<br> ваших проектов</h2><a href="/info/o-kompanii.html" class="button button-light">О компании {icon('arrow')}</a></div><div><p>ООО «Стеклофурнитура» работает с 2009 г. и имеет значительный опыт в продаже креплений и фурнитуры для различных стеклянных конструкций.</p><div class="advantages">{''.join(f'<a href="{esc(norm(a.get("href")))}">{icon("check")}<span>{esc(txt(a))}</span>{icon("up")}</a>' for a in home.xpath('//ul['+cls('advantages')+']//a'))}</div></div></div></section>
     <section class="section wrap"><div class="section-heading"><div><span class="eyebrow">05 / ПОЛЕЗНАЯ ИНФОРМАЦИЯ</span><h2>Знания для точных решений</h2></div><a class="text-link" href="/info.html">Все материалы {icon('up')}</a></div><div class="resource-grid">{''.join(f'<a class="resource-card" href="{u}"><span>0{i+1}</span><h3>{n}</h3>{icon("up")}</a>' for i,(n,u) in enumerate(info_nav))}</div><details class="company-details"><summary>Фурнитура и крепления для стекла <span>Подробнее +</span></summary><div class="prose">{company}</div></details></section>
     {contact_band()}'''
 
@@ -166,7 +180,7 @@ def contact_band():
     return f'''<section class="contact-band"><div class="wrap"><div><span class="eyebrow">ПОДБЕРЁМ ФУРНИТУРУ ДЛЯ ВАШЕГО ПРОЕКТА</span><h2>Начнём с консультации?</h2><p>Бесплатная профессиональная консультация.</p></div><a class="button" href="/contacts.html">Связаться с нами {icon('arrow')}</a></div></section>'''
 
 def sidebar(current):
-    return '<aside class="sidebar"><h2>Каталог продукции</h2>'+''.join(f'<a class="{"selected" if current.startswith(c["url"]) else ""}" href="{esc(c["url"])}">{esc(c["name"])}</a>' for c in menu)+'</aside>'
+    return '<details class="catalog-nav" open><summary>Разделы каталога'+icon('plus')+'</summary><aside class="sidebar"><h2>Каталог продукции</h2>'+''.join(f'<a class="{"selected" if current.startswith(c["url"]) else ""}" href="{esc(c["url"])}">{esc(c["name"])}</a>' for c in menu)+'</aside></details>'
 
 def read_records():
     inv=ROOT/'research/inventory.json'
@@ -185,7 +199,10 @@ def parse_source(rec):
     h1=first(middle.xpath('.//h1'));title=txt(h1)
     crumbs=[(txt(a),norm(a.get('href'))) for a in middle.xpath('.//*['+cls('bread')+']//a') if norm(a.get('href'))!='/']
     url=norm(rec['url']).split('?')[0]
-    pid=get_input(first(xp(middle,'tovar-wrapper')) or etree.Element('div'),r'shk-id$')
+    if url!='/' and (not crumbs or crumbs[-1][1]!=url):
+        crumbs.append((title or 'Полезная информация',url))
+    wrapper=first(xp(middle,'tovar-wrapper'))
+    pid=get_input(wrapper if wrapper is not None else etree.Element('div'),r'shk-id$')
     p=None
     if pid:
         el=first(xp(middle,'tovar-wrapper'))
@@ -203,9 +220,9 @@ def parse_source(rec):
 def product_page(page,p):
     photos=p.get('images',[])
     primary=asset(photos[0] if photos else p['image'])
-    thumbs=''.join(f'<button class="product-thumb" data-image="{asset(src)}" aria-label="Изображение {i+1}"><img src="{asset(src)}" alt="{esc(p["name"])}" loading="lazy"></button>' for i,src in enumerate(photos))
+    thumbs=''.join(f'<button class="product-thumb" data-image="{asset(src)}" aria-label="Изображение {i+1}" aria-pressed="{str(i==0).lower()}"><img src="{asset(src)}" alt="{esc(p["name"])}" loading="lazy"></button>' for i,src in enumerate(photos))
     related=[x for u,x in products.items() if u.startswith(p['url'].rsplit('/',1)[0]+'/') and u!=p['url']][:4]
-    return f'''<div class="wrap">{breadcrumb(page['crumbs'])}<div class="product-layout"><div class="product-gallery"><div class="product-main-image"><img id="detail-photo" src="{primary}" alt="{esc(p['name'])}"></div><div class="product-thumbs">{thumbs}</div></div><div class="product-info"><span class="eyebrow">{esc(page['crumbs'][-2][0]) if len(page['crumbs'])>1 else 'КАТАЛОГ ПРОДУКЦИИ'}</span><h1>{esc(p['name'])}</h1><span class="detail-article">Арт.: {esc(p['article'])}</span><div class="detail-spec"><span>Отделка</span><strong>{esc(p['finish'])}</strong></div><p class="product-stock"><i></i>{esc(p['stock'])}</p><div class="detail-price">{esc(p['price'] or 'Цену уточняйте')}</div><div class="order-actions"><div class="qty"><button data-qty="-1" aria-label="Уменьшить количество">−</button><input type="number" id="quantity" min="1" value="1" aria-label="Количество"><button data-qty="1" aria-label="Увеличить количество">+</button></div><button class="button" data-product="{esc(p['url'])}">В заявку {icon('plus')}</button><span>{esc(p['unit'])}</span></div><a class="product-consult" href="/contacts.html">Нужна помощь с подбором? {icon('arrow')}</a><div class="product-guarantee">{icon('check')}12 месяцев гарантии {icon('check')}Доставка по Беларуси</div></div></div><section class="product-description"><h2>Описание и характеристики</h2><div class="prose">{p['description'] or '<p>Подробную информацию уточняйте у наших специалистов.</p>'}</div></section>{('<section class="section"><div class="section-heading"><h2>В этой категории</h2></div><div class="product-grid">'+''.join(product_card(x) for x in related)+'</div></section>') if related else ''}</div>'''
+    return f'''<div class="wrap">{breadcrumb(page['crumbs'])}<div class="product-layout"><div class="product-gallery"><a class="product-main-image" href="{primary}" data-lightbox aria-label="Увеличить изображение: {esc(p['name'])}"><img id="detail-photo" src="{primary}" alt="{esc(p['name'])}"><span class="zoom-label">{icon('search')} Увеличить</span></a><div class="product-thumbs">{thumbs}</div></div><div class="product-info"><span class="eyebrow">{esc(page['crumbs'][-2][0]) if len(page['crumbs'])>1 else 'КАТАЛОГ ПРОДУКЦИИ'}</span><h1>{esc(p['name'])}</h1><span class="detail-article">Арт.: {esc(p['article'])}</span><div class="detail-spec"><span>Отделка</span><strong>{esc(p['finish'])}</strong></div><p class="product-stock"><i></i>{esc(p['stock'])}</p><div class="detail-price">{esc(p['price'] or 'Цену уточняйте')}</div><div class="order-actions"><div class="qty"><button data-qty="-1" aria-label="Уменьшить количество">−</button><input type="number" id="quantity" min="1" max="99999" step="1" inputmode="numeric" value="1" aria-label="Количество"><button data-qty="1" aria-label="Увеличить количество">+</button></div><button class="button" data-product="{esc(p['url'])}">В заявку {icon('plus')}</button><span>{esc(p['unit'])}</span></div><a class="product-consult" href="/contacts.html">Нужна помощь с подбором? {icon('arrow')}</a><div class="product-guarantee"><span>{icon('check')}12 месяцев гарантии</span><span>{icon('check')}Доставка по Беларуси</span></div></div></div><section class="product-description"><h2>Описание и характеристики</h2><div class="prose">{p['description'] or '<p>Подробную информацию уточняйте у наших специалистов.</p>'}</div></section>{('<section class="section"><div class="section-heading"><h2>В этой категории</h2></div><div class="product-grid">'+''.join(product_card(x) for x in related)+'</div></section>') if related else ''}</div>'''
 
 def catalog_page(page):
     url=page['url'];t=page['tree']
@@ -246,10 +263,22 @@ def generic_page(page):
     return f'<div class="wrap">{breadcrumb(page["crumbs"])}{page_title(page["title"] or "Полезная информация")}<div class="information-layout"><nav class="info-sidebar">'+''.join(f'<a href="{u}">{n}{icon("up")}</a>' for n,u in [nav[0]]+info_nav+[nav[3]])+'</nav><article class="prose original-content">'+clean(t)+'</article></div></div>'+contact_band()
 
 def all_catalog():
-    return '<div class="wrap">'+breadcrumb([('Каталог','/catalog.html')])+page_title('Каталог продукции','ФУРНИТУРА ДЛЯ СТЕКЛА')+'<div class="all-categories">'+''.join(f'<section><a class="category-title" href="{esc(c["url"])}"><span>{i+1:02d}</span><h2>{esc(c["name"])}</h2>{icon("up")}</a><div>'+''.join(f'<a href="{esc(x["url"])}">{esc(x["name"])}</a>' for x in c['children'])+'</div></section>' for i,c in enumerate(menu))+'</div></div>'
+    covers={categories[i]['url']:img for img,i in [
+        ('assets/images/photo_objects/Душевая раздвизжная SF-7A002.jpg',1),
+        ('assets/images/photo_objects/8.jpg',2),
+        ('assets/images/photo_objects/SP раздвижная 3.jpg',3),
+        ('assets/images/photo_objects/Т-102 анод 2.jpg',11)] if len(categories)>i}
+    sections=[]
+    # Illustrated directions lead to the same complete, unchanged category tree.
+    ordered=sorted(enumerate(menu),key=lambda row:row[1]['url'] not in covers)
+    for i,c in ordered:
+        preview=(f'<a class="category-cover-link" href="{esc(c["url"])}" tabindex="-1" aria-hidden="true"><img class="category-cover" src="{asset(covers[c["url"]])}" alt="" loading="lazy"></a>' if c['url'] in covers else '')
+        children=''.join(f'<a href="{esc(x["url"])}">{esc(x["name"])}</a>' for x in c['children'])
+        sections.append(f'<section class="{"illustrated-category" if preview else "compact-category"}">{preview}<a class="category-title" href="{esc(c["url"])}"><span>{i+1:02d}</span><h2>{esc(c["name"])}</h2>{icon("up")}</a><div>{children}</div></section>')
+    return '<div class="wrap">'+breadcrumb([('Каталог','/catalog.html')])+page_title('Каталог продукции','ФУРНИТУРА ДЛЯ СТЕКЛА')+f'<div class="catalog-intro"><p>Фурнитура для душевых кабин, стеклянных дверей, перегородок и ограждений. Выберите направление или найдите нужный артикул через поиск.</p><a class="text-link" href="/contacts.html">Помощь с подбором {icon("arrow")}</a></div><div class="all-categories">'+''.join(sections)+'</div></div>'
 
 def cart_page():
-    return f'''<div class="wrap">{breadcrumb([('Ваш заказ','/system/cart.html')])}{page_title('Ваш заказ','СПИСОК ДЛЯ РАСЧЁТА')}<div id="cart-content"></div><section class="inquiry-form" id="inquiry-form" hidden><h2>Подготовить заявку менеджеру</h2><p>Выберите специалиста и укажите контакты. Кнопка откроет вашу почтовую программу с заполненной заявкой. Затем отправьте письмо.</p><form id="inquiry"><div class="form-grid"><label>Ваше имя<input name="name" autocomplete="name" required></label><label>Телефон<input name="phone" type="tel" autocomplete="tel" required></label><label>Специалист<select name="manager"><option value="steklofurnitura@mail.ru">Назар — юридические лица и опт</option><option value="steklofurnitura@gmail.com">Виктория — физические лица</option></select></label><label>Комментарий<textarea name="comment" rows="3"></textarea></label></div><button class="button">Подготовить письмо {icon('arrow')}</button><button class="text-link" type="button" id="copy-inquiry">Скопировать список</button><p class="muted">Актуальную стоимость и наличие подтвердит менеджер. Сайт не является интернет-магазином.</p></form></section></div>'''
+    return f'''<div class="wrap">{breadcrumb([('Ваш заказ','/system/cart.html')])}{page_title('Ваш заказ','СПИСОК ДЛЯ РАСЧЁТА')}<div id="cart-content" aria-live="polite"></div><section class="inquiry-form" id="inquiry-form" hidden><h2>Подготовить заявку менеджеру</h2><p>Выберите специалиста и укажите контакты. Кнопка откроет вашу почтовую программу с заполненной заявкой. Затем отправьте письмо.</p><form id="inquiry"><p class="form-note">Добавленные товары сохраняются в этом браузере. Отправка — через вашу почтовую программу.</p><div class="form-grid"><label>Ваше имя<input name="name" autocomplete="name" required></label><label>Телефон<input name="phone" type="tel" autocomplete="tel" placeholder="+375 (__) ___-__-__" required></label><label>Специалист<select name="manager"><option value="steklofurnitura@mail.ru">Назар — юридические лица и опт</option><option value="steklofurnitura@gmail.com">Виктория — физические лица</option></select></label><label>Комментарий<textarea name="comment" rows="3"></textarea></label></div><button class="button">Подготовить письмо {icon('arrow')}</button><button class="text-link" type="button" id="copy-inquiry">Скопировать список</button><p class="muted">Актуальную стоимость и наличие подтвердит менеджер. Сайт не является интернет-магазином.</p></form></section></div>'''
 
 def write_page(path,title,body,desc=''):
     path=path.split('?')[0].split('#')[0]
@@ -261,6 +290,8 @@ def write_page(path,title,body,desc=''):
     dest.write_text(shell(title,body,path,desc),encoding='utf8')
 
 if __name__=='__main__':
+    for name in ['style.css','app.js']:
+        shutil.copyfile(STATIC/name,DIST/name)
     records=read_records();pages=[]
     for r in records:
         if not r.get('file'):continue
@@ -297,5 +328,6 @@ if __name__=='__main__':
         index.append({k:v for k,v in p.items() if k not in ['description','images'] }|{'image':asset(p['image'])})
     (DIST/'products.json').write_text(json.dumps(index,ensure_ascii=False,separators=(',',':')))
     (ROOT/'research/asset-urls.json').write_text(json.dumps(sorted(ASSETS),ensure_ascii=False,indent=2))
-    (ROOT/'research/build-report.json').write_text(json.dumps({'source_records':len(records),'pages':len(pages)+5,'products':len(products),'categories':len(categories),'assets':len(ASSETS),'source_urls':[p['url'] for p in pages]},ensure_ascii=False,indent=2))
-    print('BUILT',len(pages)+5,'pages;',len(products),'products;',len(categories),'categories;',len(ASSETS),'assets',flush=True)
+    page_count=sum(1 for _ in DIST.rglob('*.html'))
+    (ROOT/'research/build-report.json').write_text(json.dumps({'source_records':len(records),'pages':page_count,'products':len(products),'categories':len(categories),'assets':len(ASSETS),'source_urls':[p['url'] for p in pages]},ensure_ascii=False,indent=2))
+    print('BUILT',page_count,'pages;',len(products),'products;',len(categories),'categories;',len(ASSETS),'assets',flush=True)

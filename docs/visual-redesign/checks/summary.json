@@ -1,0 +1,30 @@
+{
+  "functional_scenarios": 8,
+  "functional_passed": 8,
+  "javascript_errors": [],
+  "main_layout_scenarios": 24,
+  "main_horizontal_overflow": [],
+  "main_broken_images": [],
+  "broad_layout_scenarios": 14,
+  "broad_horizontal_overflow": [],
+  "narrow_product_button": [
+    {
+      "w": 138,
+      "h": 48,
+      "lines": 1,
+      "whiteSpace": "nowrap"
+    },
+    {
+      "w": 138,
+      "h": 48,
+      "lines": 1,
+      "whiteSpace": "nowrap"
+    }
+  ],
+  "notes": [
+    "Layout rows for final home/product/contacts replaced by measured final-checks values after minor fixes.",
+    "Original first build measurements kept in layout-first-build.json.",
+    "Yandex map rendered after scrolling and waiting for iframe; final contacts screenshots include map.",
+    "This is focused browser QA, not a complete WCAG audit."
+  ]
+}
