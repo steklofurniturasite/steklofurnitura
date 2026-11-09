@@ -1,0 +1,51 @@
+{
+  "site": "https://steklofurniturasite.github.io/steklofurnitura/",
+  "commit": "8aea31dcfa6c34355dc2b048af0f18d432968c04",
+  "actions_run": 42566601607,
+  "actions_result": "success",
+  "resources": [
+    {
+      "path": "index.html",
+      "http_status": 200,
+      "matches_checked_package": true,
+      "sha256": "ccfe7c14787f71b7deba52863335151c45fcd348e41377aa362ab1aae532c666"
+    },
+    {
+      "path": "catalog.html",
+      "http_status": 200,
+      "matches_checked_package": true,
+      "sha256": "e231f989e9167500ea76a87e9013b1fa8b282038aa3ce1d381fd6f4b48d2456e"
+    },
+    {
+      "path": "contacts.html",
+      "http_status": 200,
+      "matches_checked_package": true,
+      "sha256": "d5d560d99f3f12e53f6687102135662f568e396d2eadf748a9eef3e2517bbf3e"
+    },
+    {
+      "path": "system/cart.html",
+      "http_status": 200,
+      "matches_checked_package": true,
+      "sha256": "0ffa04429a2d5510f5bf4a97a4777e7e4fbf748f274639f85d64a435dc1e3ba5"
+    },
+    {
+      "path": "style.css",
+      "http_status": 200,
+      "matches_checked_package": true,
+      "sha256": "0c99d91ef412c934230b525f28f03c0645dcfb8a82021502d9d47eebb13f9323"
+    },
+    {
+      "path": "app.js",
+      "http_status": 200,
+      "matches_checked_package": true,
+      "sha256": "4c01285702ae536d0e6ea3997d07383bdbf45a225bec22d5ef6937e44617c7d1"
+    },
+    {
+      "path": "products.json",
+      "http_status": 200,
+      "matches_checked_package": true,
+      "sha256": "132cd23700a9e7d01fbaf3af4f4dc464c3f5a71018c0016ee083a0f43347a075"
+    }
+  ],
+  "passed": true
+}

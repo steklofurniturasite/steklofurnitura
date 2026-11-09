@@ -66,4 +66,13 @@
 
 ## Публикация
 
-Локальные проверки завершены. Результат GitHub Actions и контроль опубликованной версии будут добавлены после публикации проверенного коммита.
+**Публикация успешна.** Проверенная версия перенесена в `main` без перезаписи истории.
+
+- Основной коммит: [8aea31d — Modernize the complete catalogue](https://github.com/steklofurniturasite/steklofurnitura/commit/8aea31dcfa6c34355dc2b048af0f18d432968c04).
+- [GitHub Actions №42566601607](https://github.com/steklofurniturasite/steklofurnitura/actions/runs/42566601607): `completed / success`.
+- На опубликованном сайте повторно пройдены **8/8 функциональных сценариев**, ошибок JavaScript нет. Проверены добавление и сохранение заявки, количество, копирование, удаление, поиск, сортировка, увеличение фото, меню и адаптивная навигация.
+- Главная в Chromium на **1440, 390 и 320 px**: горизонтального переполнения и сломанных изображений нет. Скриншоты просмотрены.
+- Опубликованные `index.html`, `catalog.html`, `contacts.html`, `system/cart.html`, `style.css`, `app.js`, `products.json` ответили HTTP 200 и **побайтово совпали** с проверенным пакетом `.github-pages`.
+- Доказательства: [результат публикации и хеши](visual-redesign/checks/publication.json), [функции на опубликованном сайте](visual-redesign/checks/published-functions.json), [адаптивность опубликованной главной](visual-redesign/checks/published-layout.json).
+
+Скриншоты опубликованной главной: [компьютер](visual-redesign/published-desktop.webp), [телефон](visual-redesign/published-mobile.webp). Последующий коммит с этим финальным отчётом меняет только документацию и доказательства проверки; файлы опубликованного сайта остаются теми же.

@@ -41,10 +41,9 @@ Workflow `.github/workflows/pages.yml` публикует содержимое `
 https://steklofurniturasite.github.io/steklofurnitura/.
 Он запускается при изменении сайта в `main` и вручную через Actions.
 
-Первоначальная настройка владельцем: Settings → Pages → Build and deployment →
-Source → GitHub Actions. Затем запустить workflow «Publish website to GitHub Pages»
-через Run workflow. Подключение, использованное для переноса, имеет доступ к коду,
-но GitHub отклоняет включение Pages с ошибкой `Resource not accessible by integration`.
+GitHub Pages уже настроен на публикацию через GitHub Actions. Для новой копии
+репозитория выберите Settings → Pages → Build and deployment → Source → GitHub Actions.
+Текущая версия успешно опубликована и проверена 09.11.2026: [отчёт и контрольные снимки](docs/visual-redesign-report.md).
 
 Скрипт `python3 scripts/prepare_github_pages.py` создаёт отдельный каталог
 `.github-pages/` и адаптирует абсолютные локальные ссылки под `/steklofurnitura/`.

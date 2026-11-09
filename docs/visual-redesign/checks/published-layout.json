@@ -1,0 +1,89 @@
+[
+  {
+    "width": 1440,
+    "scrollWidth": 1440,
+    "hero": "/steklofurnitura/media/7da05aba6c34e397916f1549.webp",
+    "about": "Надёжная основа\nваших проектов",
+    "broken": [],
+    "resources": [
+      {
+        "text": "Стандартные конструкции",
+        "width": 249,
+        "scroll": 249
+      },
+      {
+        "text": "Статьи",
+        "width": 249,
+        "scroll": 249
+      },
+      {
+        "text": "Документы",
+        "width": 249,
+        "scroll": 249
+      },
+      {
+        "text": "Видеоруководства",
+        "width": 249,
+        "scroll": 249
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "scrollWidth": 390,
+    "hero": "/steklofurnitura/media/7da05aba6c34e397916f1549.webp",
+    "about": "Надёжная основа ваших проектов",
+    "broken": [],
+    "resources": [
+      {
+        "text": "Стандартные конструкции",
+        "width": 139,
+        "scroll": 139
+      },
+      {
+        "text": "Статьи",
+        "width": 139,
+        "scroll": 139
+      },
+      {
+        "text": "Документы",
+        "width": 139,
+        "scroll": 139
+      },
+      {
+        "text": "Видеоруководства",
+        "width": 139,
+        "scroll": 139
+      }
+    ]
+  },
+  {
+    "width": 320,
+    "scrollWidth": 320,
+    "hero": "/steklofurnitura/media/7da05aba6c34e397916f1549.webp",
+    "about": "Надёжная основа ваших проектов",
+    "broken": [],
+    "resources": [
+      {
+        "text": "Стандартные конструкции",
+        "width": 254,
+        "scroll": 254
+      },
+      {
+        "text": "Статьи",
+        "width": 254,
+        "scroll": 254
+      },
+      {
+        "text": "Документы",
+        "width": 254,
+        "scroll": 254
+      },
+      {
+        "text": "Видеоруководства",
+        "width": 254,
+        "scroll": 254
+      }
+    ]
+  }
+]

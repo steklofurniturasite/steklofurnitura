@@ -1,0 +1,51 @@
+{
+  "base": "https://steklofurniturasite.github.io/steklofurnitura",
+  "results": [
+    {
+      "name": "home-and-catalog-menu",
+      "passed": true,
+      "details": "Фурнитура для стеклянных конструкций — Стеклофурнитура"
+    },
+    {
+      "name": "add-product-persists",
+      "passed": true,
+      "details": "/steklofurnitura/catalog/ruchki-dlya-alyuminievyix-i-derevyannyix-dverej/stif-glass/ceriya-sr.-ruchki-pryamyie/sr-670-32x325x500-sss-ruchka.html"
+    },
+    {
+      "name": "product-quantity-and-zoom",
+      "passed": true,
+      "details": "quantity + persisted cart + lightbox"
+    },
+    {
+      "name": "cart-quantity-copy-remove",
+      "passed": true,
+      "details": "increment, clipboard content, removal, empty state"
+    },
+    {
+      "name": "search-found-empty",
+      "passed": true,
+      "details": {
+        "article": "HAG M-100 BLC",
+        "count": 1463
+      }
+    },
+    {
+      "name": "sorting",
+      "passed": true,
+      "details": {
+        "count": 24
+      }
+    },
+    {
+      "name": "mobile-menu",
+      "passed": true,
+      "details": "390px"
+    },
+    {
+      "name": "responsive-category-sidebar",
+      "passed": true,
+      "details": "1440 → 390 toggle twice → 1024"
+    }
+  ],
+  "errors": []
+}
