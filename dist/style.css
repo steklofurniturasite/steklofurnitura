@@ -1982,6 +1982,10 @@ footer {
   z-index:0;
   background:var(--soft)
 }
+.office-map iframe {
+  min-height:0!important;
+  max-height:100%;
+}
 .office-map .leaflet-tile-pane {
   filter:saturate(.18)
 }
