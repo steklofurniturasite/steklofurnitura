@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy, gzip, hashlib, html as escape, json, pathlib, re, shutil, urllib.parse
 from lxml import html, etree
 from functools import lru_cache
+from sync_prices import apply_prices
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 if not (ROOT/'research/pages').exists() and (ROOT/'research/source-snapshot.json.gz').exists():
@@ -136,6 +137,7 @@ def card_data(el):
 
 products={}
 def product_card(p):
+    p=products.get(p['url'],p)
     image=asset(p['image'])
     if not image:return ''
     return f'''<article class="product-card"><a class="product-photo" href="{esc(p['url'])}"><img src="{image}" alt="{esc(p['name'])}" loading="lazy"></a><div class="product-content"><span class="product-article">{esc(p['article'])}</span><h3><a href="{esc(p['url'])}">{esc(p['name'])}</a></h3><p class="finish">{esc(p['finish'])}</p><div class="product-stock">Наличие уточняется</div><div class="product-bottom"><span class="product-price">{esc(p.get('price') or 'Цену уточняйте')}</span><small class="price-note">Стоимость подтвердит менеджер</small><button class="add-product" data-product="{esc(p['url'])}" aria-label="Добавить {esc(p['article'])} в заявку"><span>В заявку</span>{icon('plus')}</button></div></div></article>'''
@@ -223,7 +225,7 @@ def product_page(page,p):
     primary=asset(photos[0] if photos else p['image'])
     thumbs=''.join(f'<button class="product-thumb" data-image="{asset(src)}" aria-label="Изображение {i+1}" aria-pressed="{str(i==0).lower()}"><img src="{asset(src)}" alt="{esc(p["name"])}" loading="lazy"></button>' for i,src in enumerate(photos))
     related=[x for u,x in products.items() if u.startswith(p['url'].rsplit('/',1)[0]+'/') and u!=p['url']][:4]
-    return f'''<div class="wrap">{breadcrumb(page['crumbs'])}<div class="product-heading"><span class="detail-article">Арт.: {esc(p["article"])}</span><h1>{esc(p["name"])}</h1></div><div class="product-layout"><div class="product-gallery"><a class="product-main-image" href="{primary}" data-lightbox aria-label="Увеличить изображение: {esc(p['name'])}"><img id="detail-photo" src="{primary}" alt="{esc(p['name'])}"><span class="zoom-label">{icon('search')} Увеличить</span></a><div class="product-thumbs">{thumbs}</div></div><div class="product-info"><span class="eyebrow">{esc(page['crumbs'][-2][0]) if len(page['crumbs'])>1 else 'КАТАЛОГ ПРОДУКЦИИ'}</span><h2 class="order-title">Подобрать решение</h2><div class="detail-spec"><span>Отделка</span><strong>{esc(p['finish'])}</strong></div><p class="product-stock">Наличие уточняется</p><div class="detail-price">{esc(p['price'] or 'Цену уточняйте')}<small class="price-note">Сохранённая цена. Актуальную стоимость подтвердит менеджер.</small></div><div class="order-actions"><div class="qty"><button data-qty="-1" aria-label="Уменьшить количество">−</button><input type="number" id="quantity" min="1" max="99999" step="1" inputmode="numeric" value="1" aria-label="Количество"><button data-qty="1" aria-label="Увеличить количество">+</button></div><button class="button" data-product="{esc(p['url'])}">В заявку {icon('plus')}</button><span>{esc(p['unit'])}</span></div><a class="product-consult" href="/contacts.html">Нужна помощь с подбором? {icon('arrow')}</a><div class="product-guarantee"><span>{icon('check')}12 месяцев гарантии</span><span>{icon('check')}Доставка по Беларуси</span></div></div></div><section class="product-description"><h2>Описание и характеристики</h2><div class="prose">{p['description'] or '<p>Подробную информацию уточняйте у наших специалистов.</p>'}</div></section>{('<section class="section"><div class="section-heading"><h2>В этой категории</h2></div><div class="product-grid">'+''.join(product_card(x) for x in related)+'</div></section>') if related else ''}</div>'''
+    return f'''<div class="wrap">{breadcrumb(page['crumbs'])}<div class="product-heading"><span class="detail-article">Арт.: {esc(p["article"])}</span><h1>{esc(p["name"])}</h1></div><div class="product-layout"><div class="product-gallery"><a class="product-main-image" href="{primary}" data-lightbox aria-label="Увеличить изображение: {esc(p['name'])}"><img id="detail-photo" src="{primary}" alt="{esc(p['name'])}"><span class="zoom-label">{icon('search')} Увеличить</span></a><div class="product-thumbs">{thumbs}</div></div><div class="product-info"><span class="eyebrow">{esc(page['crumbs'][-2][0]) if len(page['crumbs'])>1 else 'КАТАЛОГ ПРОДУКЦИИ'}</span><h2 class="order-title">Подобрать решение</h2><div class="detail-spec"><span>Отделка</span><strong>{esc(p['finish'])}</strong></div><p class="product-stock">Наличие уточняется</p><div class="detail-price">{esc(p['price'] or 'Цену уточняйте')}<small class="price-note">Цена по последней сверке. Итоговую стоимость подтвердит менеджер.</small></div><div class="order-actions"><div class="qty"><button data-qty="-1" aria-label="Уменьшить количество">−</button><input type="number" id="quantity" min="1" max="99999" step="1" inputmode="numeric" value="1" aria-label="Количество"><button data-qty="1" aria-label="Увеличить количество">+</button></div><button class="button" data-product="{esc(p['url'])}">В заявку {icon('plus')}</button><span>{esc(p['unit'])}</span></div><a class="product-consult" href="/contacts.html">Нужна помощь с подбором? {icon('arrow')}</a><div class="product-guarantee"><span>{icon('check')}12 месяцев гарантии</span><span>{icon('check')}Доставка по Беларуси</span></div></div></div><section class="product-description"><h2>Описание и характеристики</h2><div class="prose">{p['description'] or '<p>Подробную информацию уточняйте у наших специалистов.</p>'}</div></section>{('<section class="section"><div class="section-heading"><h2>В этой категории</h2></div><div class="product-grid">'+''.join(product_card(x) for x in related)+'</div></section>') if related else ''}</div>'''
 
 def catalog_page(page):
     url=page['url'];t=page['tree']
@@ -312,6 +314,9 @@ if __name__=='__main__':
                 else:
                     for key in ['stock','price','oldPrice']:
                         if p.get(key):products[p['url']][key]=p[key]
+    price_file=ROOT/'data/prices.json'
+    if not price_file.exists(): raise RuntimeError('Missing verified prices; run scripts/sync_prices.py --apply first')
+    apply_prices(products,json.loads(price_file.read_text()))
     write_page('/','Фурнитура для стеклянных конструкций',home_page())
     write_page('/catalog.html','Каталог продукции',all_catalog())
     for page in pages:

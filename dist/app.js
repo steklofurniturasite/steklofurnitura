@@ -154,7 +154,7 @@
 
   async function getProducts() {
     if (!productsPromise) {
-      productsPromise = fetch('/products.json')
+      productsPromise = fetch('/products.json', { cache: 'no-store' })
         .then(response => {
           if (!response.ok) throw new Error('Каталог недоступен');
           return response.json();
@@ -286,7 +286,13 @@
     const item = cart.find(entry => entry.url === url);
     if (item) {
       item.qty = quantityValue(value);
-      saveCart(cart);
+      if (saveCart(cart)) {
+        const row = $$('.cart-row').find(element => element.dataset.cartUrl === url);
+        const price = row && $('.cart-price', row);
+        if (price) price.textContent = itemPriceText(productMap.get(url), item.qty);
+        const total = $('.cart-total');
+        if (total) total.textContent = inquiryTotal();
+      }
     }
   }
 
@@ -545,6 +551,30 @@
     }
   }
 
+  // Integer kopecks avoid rounding drift; unknown prices never become zero.
+  function priceMinor(product) {
+    return product?.priceStatus === 'verified' && Number.isSafeInteger(product.priceAmountMinor) && product.priceAmountMinor > 0
+      ? BigInt(product.priceAmountMinor) : null;
+  }
+  function formatPrice(minor) {
+    return `${minor / 100n},${String(minor % 100n).padStart(2, '0')} BYN`;
+  }
+  function itemPriceText(product, quantity) {
+    const minor = priceMinor(product);
+    return minor === null ? 'Цену уточняйте'
+      : `${formatPrice(minor)} × ${quantity} = ${formatPrice(minor * BigInt(quantity))} (с НДС)`;
+  }
+  function inquiryTotal() {
+    let total = 0n, unknown = false;
+    getCart().forEach(item => {
+      const minor = priceMinor(productMap.get(item.url));
+      if (minor === null) unknown = true;
+      else total += minor * BigInt(item.qty);
+    });
+    return unknown ? `Итого: Цену уточняйте${total > 0n ? `. Сумма позиций с подтверждённой ценой: ${formatPrice(total)}` : ''}`
+      : `Итого: ${formatPrice(total)} (с НДС)`;
+  }
+
   async function renderCart() {
     const root = $('#cart-content');
     if (!root) return;
@@ -567,12 +597,12 @@
         if (!product) return '';
         const p = Object.fromEntries(Object.entries(product).map(([key, value]) => [key, escapeHTML(value)]));
         return `<div class="cart-row" data-cart-url="${p.url}"><img src="${p.image}" alt="${p.name}">
-          <div><h3><a href="${p.url}">${p.name}</a></h3><p>${p.article} · ${p.finish}</p></div>
+          <div><h3><a href="${p.url}">${p.name}</a></h3><p>${p.article} · ${p.finish}</p><p class="cart-price">${itemPriceText(product, item.qty)}</p></div>
           <div class="qty"><button type="button" data-qty="-1" aria-label="Уменьшить количество ${p.article}">−</button>
             <input type="number" min="1" max="99999" value="${item.qty}" inputmode="numeric" aria-label="Количество ${p.article}">
             <button type="button" data-qty="1" aria-label="Увеличить количество ${p.article}">+</button></div>
           <button type="button" class="cart-remove" data-remove="${p.url}" aria-label="Убрать ${p.article} из заявки">×</button></div>`;
-      }).join('');
+      }).join('') + `<p class="muted cart-total">${inquiryTotal()}</p>`;
       form.hidden = false;
     } catch {
       if (request === cartRender) root.innerHTML = errorState('Ваша заявка сохранена в браузере. Повторите загрузку товаров.', 'cart');
@@ -593,8 +623,8 @@
     return ['Здравствуйте! Прошу уточнить стоимость и наличие фурнитуры.', '',
       ...getCart().map((item, index) => {
         const product = productMap.get(item.url);
-        return product ? `${index + 1}. ${product.name}\nАрт.: ${product.article}\nОтделка: ${product.finish}\nКоличество: ${item.qty} ${product.unit || 'шт.'}\nСсылка: ${publicProductURL(product)}` : '';
-      }), '', `Имя: ${fields.get('name')}`, `Телефон: ${fields.get('phone')}`,
+        return product ? `${index + 1}. ${product.name}\nАрт.: ${product.article}\nОтделка: ${product.finish}\nКоличество: ${item.qty} ${product.unit || 'шт.'}\nЦена: ${priceMinor(product) === null ? 'Цену уточняйте' : `${formatPrice(priceMinor(product))} (с НДС)`}\nСумма: ${priceMinor(product) === null ? 'Цену уточняйте' : formatPrice(priceMinor(product) * BigInt(item.qty))}\nСсылка: ${publicProductURL(product)}` : '';
+      }), '', inquiryTotal(), '', `Имя: ${fields.get('name')}`, `Телефон: ${fields.get('phone')}`,
       `Комментарий: ${fields.get('comment') || ''}`].join('\n');
   }
 

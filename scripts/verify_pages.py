@@ -5,6 +5,7 @@ import pathlib
 import sys
 from urllib.parse import unquote, urlsplit
 from lxml import html
+from sync_prices import validate_manifest, label
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 base = sys.argv[1] if len(sys.argv) > 1 else '/steklofurnitura'
@@ -14,9 +15,18 @@ for name in ['index.html', 'catalog.html', 'search.html', 'system/cart.html', 'c
     assert (out / name).is_file(), f'Missing required output: {name}'
 assert 'наименований на складе' not in (out/'index.html').read_text(), 'Unconfirmed homepage inventory'
 source = json.loads((ROOT/'dist/products.json').read_text())
-canonical = [{k:v for k,v in p.items() if k != 'route'} for p in source]
+manifest=json.loads((ROOT/'data/prices.json').read_text())
+validate_manifest(manifest,source)
+baseline=json.loads((ROOT/'data/price-migration-baseline.json').read_text())
+canonical=[]
+for product in source:
+    record=manifest['products'][product['url']]
+    assert product['price']==label(record) and product['oldPrice']=='', 'Published price differs from verified source'
+    assert product['priceAmountMinor']==record['amount_minor'] and product['priceStatus']==record['status'] and product['priceCheckedAt']==record['checked_at'], 'Price metadata mismatch'
+    old={k:v for k,v in product.items() if k not in ('route','priceAmountMinor','priceStatus','priceCheckedAt')}
+    old.update(baseline[product['url']]);canonical.append(old)
 digest = hashlib.sha256(json.dumps(canonical,ensure_ascii=False,sort_keys=True).encode()).hexdigest()
-assert digest == (ROOT/'research/catalog-baseline.sha256').read_text().strip(), 'Catalogue data changed: review snapshot before updating baseline'
+assert digest == (ROOT/'research/catalog-baseline.sha256').read_text().strip(), 'Non-price catalogue data or original backup changed'
 prepared = json.loads((out/'products.json').read_text())
 assert len(source) == len(prepared) == 1463
 for original, product in zip(source, prepared):
@@ -37,4 +47,4 @@ for path in out.rglob('*.html'):
     for element in tree.xpath('//*[contains(concat(" ", normalize-space(@class), " "), " product-stock ")]'):
         assert element.text_content().strip() == 'Наличие уточняется', f'Unconfirmed stock: {path}'
     assert not tree.xpath('//*[contains(concat(" ",normalize-space(@class)," ")," sale-label ")]'), f'Unconfirmed sale: {path}'
-print(f'PASS: {len(source)} unchanged products; {count} prepared links; honest availability')
+print(f'PASS: {len(source)} products with unchanged non-price data and verified prices; {count} prepared links; honest availability')
