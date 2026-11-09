@@ -1,0 +1,21 @@
+{
+  "touch": true,
+  "cpuThrottling": 4,
+  "rafIdleAfterInteractions": {
+    "samples": 60,
+    "maxGapMs": 22.5,
+    "meanGapMs": 16.41166666659216
+  },
+  "widths": [
+    320,
+    360,
+    375,
+    390,
+    430,
+    768,
+    1024,
+    1440,
+    1920
+  ],
+  "errors": []
+}
