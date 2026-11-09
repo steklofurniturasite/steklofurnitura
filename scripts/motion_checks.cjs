@@ -5,6 +5,16 @@ const fs=require('fs');
 (async()=>{
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,args:['--no-sandbox']});
  const context=await browser.newContext();
+ await context.addInitScript(() => {
+   const animate = Element.prototype.animate;
+   window.__menuMotionStarted = false;
+   if (typeof animate !== 'function') return;
+   Element.prototype.animate = function(...args) {
+     const animation = animate.apply(this,args);
+     if (this.id === 'mobile-nav' && animation.playState === 'running') window.__menuMotionStarted = true;
+     return animation;
+   };
+ });
  const page=await context.newPage();
  const base=(process.env.TEST_ORIGIN||'http://127.0.0.1:8000')+(process.env.TEST_BASE===undefined?'/steklofurnitura':process.env.TEST_BASE);
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -14,7 +24,7 @@ const fs=require('fs');
  await page.goto(base+'/');
  const opener=page.locator('[data-toggle="mobile-nav"]');
  await opener.click();assert.equal(await opener.getAttribute('aria-expanded'),'true');
- assert(await page.locator('#mobile-nav').evaluate(e=>e.getAnimations().length>0));
+ assert(await page.evaluate(()=>window.__menuMotionStarted), 'Menu must start a real animation; assertion must not depend on click roundtrip duration');
  await page.keyboard.press('Escape');
  assert(!(await page.locator('#mobile-nav').isVisible()));
  assert(await opener.evaluate(e=>document.activeElement===e));
@@ -62,9 +72,11 @@ const fs=require('fs');
  await f.locator('[data-toggle="catalog-menu"]').first().click();assert(await f.locator('#catalog-menu').isVisible());await f.keyboard.press('Escape');assert(!(await f.locator('#catalog-menu').isVisible()));
  const noJS=await browser.newContext({javaScriptEnabled:false});const n=await noJS.newPage();await n.goto(base+'/');assert(await n.locator('h1').isVisible());assert(await n.locator('.hero-buttons .button').isVisible());
  const failure=await browser.newContext();const e=await failure.newPage();
- await e.route('**/products.json',async r=>{await new Promise(resolve=>setTimeout(resolve,250));await r.fulfill({status:503,body:'offline'});});
+ let releaseRequest;const pendingRequest=new Promise(resolve=>{releaseRequest=resolve;});
+ await e.route('**/products.json',async r=>{await pendingRequest;await r.fulfill({status:503,body:'offline'});});
  await e.goto(base+product.url);await e.locator('.order-actions [data-product]').click();
  assert.equal((await e.locator('.order-actions [data-product]').innerText()).trim(),'Добавляем…');
+ releaseRequest();
  await e.waitForFunction(()=>!document.querySelector('.order-actions [data-product]').disabled);
  assert(!(await e.locator('.order-actions [data-product]').evaluate(el=>el.classList.contains('is-added'))));
  assert((await e.locator('.toast:not(.motion-exit)').innerText()).includes('Не удалось'));

@@ -243,11 +243,13 @@
     if (!panel) return;
     const wasOpen = !panel.hidden;
     if (open && trigger && !panel.contains(trigger)) menuOpeners.set(id, trigger);
+    const departing = exitLayers.get(panel);
+    const resume = departing ? getComputedStyle(departing).opacity : 0;
     if (open) clearExit(panel);
     if (wasOpen && !open) animateExit(panel);
     motionByElement.get(panel)?.cancel();
     panel.hidden = !open;
-    if (open && !wasOpen) animateUI(panel, [{ opacity: 0, translate: '0 -8px' }, { opacity: 1, translate: '0 0' }], { duration: motionTime.enter });
+    if (open && !wasOpen) animateUI(panel, [{ opacity: Number(resume), translate: '0 -6px' }, { opacity: 1, translate: '0 0' }], { duration: motionTime.enter });
     $$(`[data-toggle="${id}"]`).forEach(button => {
       button.setAttribute('aria-expanded', String(open));
       button.setAttribute('aria-controls', id);
@@ -296,6 +298,27 @@
     }
   }
 
+  // Keep the outgoing photograph over the decoded next frame: no white fade dip.
+  const imageOverlays = new WeakMap();
+  function replacePhoto(image, source) {
+    const previous = imageOverlays.get(image);
+    if (previous) { motionByElement.get(previous)?.cancel(); previous.remove(); }
+    let overlay;
+    if (!reducedMotion.matches && image.complete && image.naturalWidth && image.parentElement.classList.contains('product-main-image')) {
+      overlay = image.cloneNode();
+      overlay.removeAttribute('id'); overlay.alt = ''; overlay.setAttribute('aria-hidden', 'true');
+      overlay.className = 'gallery-previous';
+      Object.assign(overlay.style, {position:'absolute', left:`${image.offsetLeft}px`, top:`${image.offsetTop}px`, width:`${image.clientWidth}px`, height:`${image.clientHeight}px`});
+      image.parentElement.append(overlay); imageOverlays.set(image, overlay);
+    }
+    image.src = source;
+    if (overlay) {
+      const animation = animateUI(overlay, [{opacity:1},{opacity:0}], {duration:motionTime.medium});
+      const remove = () => { overlay.remove(); if (imageOverlays.get(image) === overlay) imageOverlays.delete(image); };
+      if (animation) animation.finished.then(remove,remove); else remove();
+    }
+  }
+
   let imageRevision = 0;
   function selectProductImage(thumbnail) {
     const image = $('#detail-photo');
@@ -307,14 +330,17 @@
     const apply = () => {
       if (revision !== imageRevision) return;
       image.removeAttribute('aria-busy');
-      image.src = next;
+      replacePhoto(image, next);
       const zoom = image.closest('a[data-lightbox]');
       if (zoom) zoom.href = next;
-      animateUI(image, [{ opacity: .65 }, { opacity: 1 }], { duration: motionTime.medium });
+
     };
     if (image.src !== new URL(next, location.href).href) {
       image.setAttribute('aria-busy', 'true');
-      preloader.onload = apply;
+      preloader.onload = () => {
+        const decoded = typeof preloader.decode === 'function' ? preloader.decode() : Promise.resolve();
+        decoded.catch(() => {}).then(apply);
+      };
       preloader.onerror = () => {
         if (revision !== imageRevision) return;
         image.removeAttribute('aria-busy');
@@ -345,14 +371,51 @@
     image.src = link.href;
     image.alt = $('img', link)?.alt || 'Изображение';
     const close = document.createElement('button');
+    close.className = 'lightbox-close';
     close.type = 'button';
     close.textContent = '×';
     close.setAttribute('aria-label', 'Закрыть изображение');
     [...exitLayers.keys()].filter(element => !element.isConnected).forEach(clearExit);
+    const group = link.closest('.product-gallery, .full-project');
+    const sources = group?.classList.contains('product-gallery')
+      ? $$('.product-thumb[data-image]', group).map(button => new URL(button.dataset.image, location.href).href)
+      : group ? $$('a[data-lightbox]', group).map(anchor => anchor.href) : [link.href];
+    let selected = Math.max(0, sources.indexOf(link.href)), revision = 0;
+    const count = document.createElement('span'); count.className = 'lightbox-count';
+    count.setAttribute('aria-live', 'polite'); count.textContent = `${selected + 1} / ${sources.length}`;
+    async function navigate(step) {
+      selected = (selected + step + sources.length) % sources.length;
+      const current = ++revision, target = selected, next = new Image();
+      image.setAttribute('aria-busy','true');
+      next.onload = async () => {
+        try { await next.decode(); } catch {}
+        if (current !== revision || !dialog.open) return;
+        image.src = sources[target]; image.removeAttribute('aria-busy');
+        count.textContent = `${target + 1} / ${sources.length}`;
+        animateUI(image, [{opacity:.8},{opacity:1}], {duration:motionTime.quick});
+      };
+      next.onerror = () => {
+        if (current !== revision || !dialog.open) return;
+        image.removeAttribute('aria-busy'); selected = Math.max(0,sources.indexOf(image.src));
+        count.textContent = 'Фото недоступно. Повторите выбор.';
+      };
+      next.src = sources[target];
+    }
+    if (sources.length > 1) {
+      for (const [step, label, className, symbol] of [[-1,'Предыдущее изображение','lightbox-prev','←'],[1,'Следующее изображение','lightbox-next','→']]) {
+        const control = document.createElement('button'); control.type='button';
+        control.className=`lightbox-nav ${className}`; control.textContent=symbol; control.setAttribute('aria-label',label);
+        control.addEventListener('click',() => navigate(step)); dialog.append(control);
+      }
+      dialog.append(count);
+      dialog.addEventListener('keydown', event => {
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); navigate(event.key === 'ArrowLeft' ? -1 : 1); }
+      });
+    }
     let cleaned = false;
     const cleanup = () => {
       if (cleaned) return;
-      cleaned = true;
+      cleaned = true; revision++;
       dialog.remove();
       if (link.isConnected) link.focus({ preventScroll: true });
     };
@@ -640,12 +703,22 @@
     toast('Заявка подготовлена. Отправьте письмо в почтовой программе.');
   });
 
-  $('#copy-inquiry')?.addEventListener('click', async () => {
+  $('#copy-inquiry')?.addEventListener('click', async event => {
+    const button=event.currentTarget;
+    if (button.disabled) return;
+    clearTimeout(addedTimers.get(button));
+    if (!buttonLabels.has(button)) buttonLabels.set(button,button.innerHTML);
+    button.disabled=true; button.setAttribute('aria-busy','true'); button.textContent='Копируем…';
     try {
       await navigator.clipboard.writeText(inquiryText());
+      button.textContent='Скопировано ✓';
       toast('Список скопирован');
     } catch {
+      button.textContent='Повторить копирование';
       toast('Не удалось скопировать. Выделите товары на странице и скопируйте вручную.');
+    } finally {
+      button.disabled=false; button.removeAttribute('aria-busy');
+      addedTimers.set(button,setTimeout(() => { button.innerHTML=buttonLabels.get(button); },2200));
     }
   });
 

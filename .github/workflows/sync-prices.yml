@@ -53,6 +53,7 @@ jobs:
           node scripts/map_checks.cjs
           node scripts/motion_checks.cjs
           node scripts/price_checks.cjs
+          node scripts/premium_checks.cjs
       - name: Save short report
         run: |
           cp .price-sync/summary.json data/price-sync-summary.json

@@ -1,0 +1,83 @@
+{
+  "environment": "Local HTTP, Chromium, 375x850, CPU 4x, three fresh contexts per version; no network shaping. RAF during four menu interactions; lab observations, not real-user CWV or guaranteed compositor FPS.",
+  "results": [
+    {
+      "name": "before",
+      "run": 0,
+      "lcp": 496,
+      "cls": 0,
+      "fcp": 496,
+      "frames": {
+        "samples": 98,
+        "mean": 16.442857142811526,
+        "p95": 16.799999999999727,
+        "max": 16.800000000000182
+      }
+    },
+    {
+      "name": "after",
+      "run": 0,
+      "lcp": 672,
+      "cls": 0,
+      "fcp": 672,
+      "frames": {
+        "samples": 100,
+        "mean": 16.639999999970197,
+        "p95": 16.799999999999727,
+        "max": 33.40000000000009
+      }
+    },
+    {
+      "name": "before",
+      "run": 1,
+      "lcp": 628,
+      "cls": 0,
+      "fcp": 628,
+      "frames": {
+        "samples": 100,
+        "mean": 16.834000000014903,
+        "p95": 16.799999999999727,
+        "max": 33.40000000000009
+      }
+    },
+    {
+      "name": "after",
+      "run": 1,
+      "lcp": 408,
+      "cls": 0,
+      "fcp": 200,
+      "frames": {
+        "samples": 98,
+        "mean": 16.470408163326127,
+        "p95": 16.799999999999727,
+        "max": 16.800000000000182
+      }
+    },
+    {
+      "name": "before",
+      "run": 2,
+      "lcp": 540,
+      "cls": 0,
+      "fcp": 540,
+      "frames": {
+        "samples": 103,
+        "mean": 16.539805825242716,
+        "p95": 16.700000000000273,
+        "max": 33.299999999999955
+      }
+    },
+    {
+      "name": "after",
+      "run": 2,
+      "lcp": 540,
+      "cls": 0,
+      "fcp": 540,
+      "frames": {
+        "samples": 103,
+        "mean": 16.772815534009517,
+        "p95": 16.799999999999955,
+        "max": 33.399999999999864
+      }
+    }
+  ]
+}

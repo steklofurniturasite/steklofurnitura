@@ -52,6 +52,7 @@ jobs:
           node scripts/map_checks.cjs
           node scripts/motion_checks.cjs
           node scripts/price_checks.cjs
+          node scripts/premium_checks.cjs
       - name: Confirm failed validation blocks publishing
         run: |
           mv .github-pages/products.json .github-pages/products.disabled

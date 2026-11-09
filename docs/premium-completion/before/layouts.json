@@ -1,0 +1,110 @@
+[
+  {
+    "name": "home",
+    "width": 1440,
+    "height": 7961,
+    "overflow": false
+  },
+  {
+    "name": "catalog",
+    "width": 1440,
+    "height": 3995,
+    "overflow": false
+  },
+  {
+    "name": "category",
+    "width": 1440,
+    "height": 3175,
+    "overflow": false
+  },
+  {
+    "name": "product",
+    "width": 1440,
+    "height": 2994,
+    "overflow": false
+  },
+  {
+    "name": "cart",
+    "width": 1440,
+    "height": 2412,
+    "overflow": false
+  },
+  {
+    "name": "contacts",
+    "width": 1440,
+    "height": 2451,
+    "overflow": false
+  },
+  {
+    "name": "projects",
+    "width": 1440,
+    "height": 13331,
+    "overflow": false
+  },
+  {
+    "name": "information",
+    "width": 1440,
+    "height": 4962,
+    "overflow": false
+  },
+  {
+    "name": "about",
+    "width": 1440,
+    "height": 4012,
+    "overflow": false
+  },
+  {
+    "name": "home",
+    "width": 375,
+    "height": 11121,
+    "overflow": false
+  },
+  {
+    "name": "catalog",
+    "width": 375,
+    "height": 7543,
+    "overflow": false
+  },
+  {
+    "name": "category",
+    "width": 375,
+    "height": 4257,
+    "overflow": false
+  },
+  {
+    "name": "product",
+    "width": 375,
+    "height": 4392,
+    "overflow": false
+  },
+  {
+    "name": "cart",
+    "width": 375,
+    "height": 3067,
+    "overflow": false
+  },
+  {
+    "name": "contacts",
+    "width": 375,
+    "height": 3605,
+    "overflow": false
+  },
+  {
+    "name": "projects",
+    "width": 375,
+    "height": 18872,
+    "overflow": false
+  },
+  {
+    "name": "information",
+    "width": 375,
+    "height": 6475,
+    "overflow": false
+  },
+  {
+    "name": "about",
+    "width": 375,
+    "height": 5727,
+    "overflow": false
+  }
+]
