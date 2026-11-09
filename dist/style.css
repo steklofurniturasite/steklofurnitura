@@ -3372,3 +3372,32 @@ footer {
     color:inherit
   }
 }
+
+/* Small catalogue utilities share the existing visual language. */
+.detail-identification { display:flex; align-items:center; flex-wrap:wrap; gap:4px 16px; }
+.copy-article { min-height:44px; padding:8px 0; font-size:13px; background:transparent; text-decoration:underline; text-underline-offset:4px; }
+#print-inquiry { min-height:44px; margin-left:20px; }
+@media (max-width:430px) {
+  .copy-article { margin-left:0; display:block; padding-left:0; }
+  #print-inquiry { margin-left:0; display:block; }
+}
+@media print {
+  @page { margin:14mm; }
+  body:has(#cart-content) .inquiry-form>h2 { font-size:20px; }
+  body:has(#cart-content) .inquiry-form>p { display:none; }
+  body:has(#cart-content) { background:white; color:black; }
+  body:has(#cart-content) header, body:has(#cart-content) footer,
+  body:has(#cart-content) .breadcrumb, body:has(#cart-content) .breadcrumbs,
+  body:has(#cart-content) .inquiry-steps, body:has(#cart-content) .toast,
+  body:has(#cart-content) .skip-link, body:has(#cart-content) button,
+  body:has(#cart-content) .form-note { display:none!important; }
+  body:has(#cart-content) main, body:has(#cart-content) .wrap { width:100%; max-width:none; margin:0; padding:0; }
+  body:has(#cart-content) .cart-row { break-inside:avoid; grid-template-columns:64px 1fr 80px; padding:14px 0; }
+  body:has(#cart-content) .cart-row>img { width:60px; height:60px; }
+  body:has(#cart-content) .cart-row>div:nth-child(2) { grid-column:auto; }
+  body:has(#cart-content) .cart-row>.qty { grid-column:auto; grid-row:auto; margin:0; border:0; }
+  body:has(#cart-content) .cart-row .qty input { border:0; width:70px; appearance:textfield; }
+  body:has(#cart-content) .cart-row h3 { font-size:14px; }
+  body:has(#cart-content) .inquiry-form { break-inside:avoid; margin-top:24px; padding:20px; }
+  body:has(#cart-content) .page-title { font-size:28px; margin:16px 0; }
+}

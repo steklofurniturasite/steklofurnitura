@@ -407,6 +407,19 @@
         control.className=`lightbox-nav ${className}`; control.textContent=symbol; control.setAttribute('aria-label',label);
         control.addEventListener('click',() => navigate(step)); dialog.append(control);
       }
+      // Horizontal one-finger swipes; vertical scrolling and pinch zoom stay native.
+      let swipeStart = null;
+      image.addEventListener('touchstart', event => {
+        swipeStart = event.touches.length === 1 ? { x:event.touches[0].clientX, y:event.touches[0].clientY } : null;
+      }, {passive:true});
+      image.addEventListener('touchmove', event => { if (event.touches.length !== 1) swipeStart = null; }, {passive:true});
+      image.addEventListener('touchcancel', () => { swipeStart = null; });
+      image.addEventListener('touchend', event => {
+        if (!swipeStart || event.touches.length || !event.changedTouches.length) return;
+        const dx=event.changedTouches[0].clientX-swipeStart.x, dy=event.changedTouches[0].clientY-swipeStart.y;
+        swipeStart=null;
+        if (Math.abs(dx)>=55 && Math.abs(dx)>Math.abs(dy)*1.5) navigate(dx<0 ? 1 : -1);
+      }, {passive:true});
       dialog.append(count);
       dialog.addEventListener('keydown', event => {
         if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); navigate(event.key === 'ArrowLeft' ? -1 : 1); }
@@ -597,11 +610,13 @@
     results.innerHTML = '<p class="loading-state" role="status">Загружаем товары…</p>';
     try {
       const products = await getProducts();
-      const normalize = value => value.toLocaleLowerCase('ru').replace(/[\s\-–хx×]/g, '');
+      const normalize = value => value.toLocaleLowerCase('ru').replace(/ё/g, 'е').replace(/[\s\-–хx×]/g, '');
       const words = query.split(/\s+/).filter(Boolean).map(normalize);
       const matches = products.filter(product => words.every(word =>
         normalize([product.name, product.article, product.finish, product.url].join(' ')).includes(word)
       ));
+      const exactArticle = normalize(query);
+      matches.sort((a, b) => Number(normalize(b.article) === exactArticle) - Number(normalize(a.article) === exactArticle));
       summary.textContent = `По запросу «${query}» найдено товаров: ${matches.length}`;
       results.innerHTML = matches.length ? matches.map(productCard).join('') :
         '<div class="empty-state"><h2>Ничего не найдено</h2><p>Попробуйте другой артикул или более короткое название.</p><a class="button" href="/catalog.html">Открыть каталог</a></div>';
@@ -722,13 +737,27 @@
     }
   });
 
-  $('#sort-products')?.addEventListener('change', event => {
+  $('[data-copy-article]')?.addEventListener('click', async event => {
+    const button=event.currentTarget;
+    if (button.disabled) return;
+    button.disabled=true;
+    try {
+      await navigator.clipboard.writeText(button.dataset.copyArticle);
+      toast('Артикул скопирован: '+button.dataset.copyArticle);
+    } catch { toast('Не удалось скопировать. Выделите артикул и скопируйте вручную.'); }
+    finally { button.disabled=false; }
+  });
+  $('#print-inquiry')?.addEventListener('click', () => window.print());
+
+  const sortControl = $('#sort-products');
+  sortControl?.addEventListener('change', event => {
     const grid = $('.catalog-products');
     if (!grid) return;
     const cards = $$('.product-card', grid);
     const before = capturePositions(cards);
     cards.forEach((card, index) => { if (card.dataset.order === undefined) card.dataset.order = index; });
     const key = event.target.value;
+    try { sessionStorage.setItem('steklofurnitura-sort', key); } catch {}
     cards.sort((a, b) => {
       if (key === 'default') return Number(a.dataset.order) - Number(b.dataset.order);
       const selector = key === 'name' ? 'h3' : '.product-article';
@@ -737,6 +766,16 @@
     grid.append(...cards);
     animatePositions(before, cards);
   });
+
+  if (sortControl) {
+    try {
+      const saved=sessionStorage.getItem('steklofurnitura-sort');
+      if (['name','article'].includes(saved)) {
+        sortControl.value=saved;
+        sortControl.dispatchEvent(new Event('change'));
+      }
+    } catch {}
+  }
 
   window.addEventListener('storage', event => {
     if (event.key === CART_KEY || event.key === null) {
