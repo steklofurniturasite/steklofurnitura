@@ -293,6 +293,7 @@ header {
   object-fit:contain
 }
 .logo-type {
+  white-space:nowrap;
   font-size:16px;
   font-weight:800;
   line-height:1.15;

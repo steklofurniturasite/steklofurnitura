@@ -70,7 +70,7 @@ def header(active=''):
     catlinks=''.join(f'<a href="{esc(x["url"])}">{esc(x["name"])}{icon("arrow")}</a>' for x in menu)
     return f'''<a class="skip" href="#main">К содержимому</a>
     <div class="topbar"><div class="wrap"><span>Фурнитура для стекла и стеклянных конструкций</span><a href="/contacts.html">Минск, пр-т Независимости, 177 {icon('pin')}</a><span>Пн–Чт 09:00–18:00 · Пт 09:00–17:00</span></div></div>
-    <header><div class="wrap header-main"><a class="logo" href="/" aria-label="Стеклофурнитура — главная"><img src="{asset('/template/image/logo2.png')}" alt="Стеклофурнитура"><span class="logo-type">СТЕКЛО<br> <b>ФУРНИТУРА</b></span></a>
+    <header><div class="wrap header-main"><a class="logo" href="/" aria-label="Стеклофурнитура — главная"><img src="{asset('/template/image/logo2.png')}" alt="Стеклофурнитура"><span class="logo-type">СтеклоФурнитура</span></a>
     <button class="button catalog-button" data-toggle="catalog-menu" aria-expanded="false" aria-controls="catalog-menu">{icon('menu')}<span>Каталог</span></button>
     <form class="search" action="/search.html" role="search"><input type="search" name="q" aria-label="Поиск по каталогу" placeholder="Название товара или артикул"><button aria-label="Найти">{icon('search')}</button></form>
     <div class="header-phone"><a href="tel:+375296335155">+375 (29) 633-51-55</a><span>Назар · юр. лица и опт</span></div>
