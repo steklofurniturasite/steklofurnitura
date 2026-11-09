@@ -137,10 +137,10 @@ def card_data(el):
 
 products={}
 def product_card(p):
-    p=products.get(p['url'],p)
+    current_price=products.get(p['url'],p).get('price')
     image=asset(p['image'])
     if not image:return ''
-    return f'''<article class="product-card"><a class="product-photo" href="{esc(p['url'])}"><img src="{image}" alt="{esc(p['name'])}" loading="lazy"></a><div class="product-content"><span class="product-article">{esc(p['article'])}</span><h3><a href="{esc(p['url'])}">{esc(p['name'])}</a></h3><p class="finish">{esc(p['finish'])}</p><div class="product-stock">Наличие уточняется</div><div class="product-bottom"><span class="product-price">{esc(p.get('price') or 'Цену уточняйте')}</span><small class="price-note">Стоимость подтвердит менеджер</small><button class="add-product" data-product="{esc(p['url'])}" aria-label="Добавить {esc(p['article'])} в заявку"><span>В заявку</span>{icon('plus')}</button></div></div></article>'''
+    return f'''<article class="product-card"><a class="product-photo" href="{esc(p['url'])}"><img src="{image}" alt="{esc(p['name'])}" loading="lazy"></a><div class="product-content"><span class="product-article">{esc(p['article'])}</span><h3><a href="{esc(p['url'])}">{esc(p['name'])}</a></h3><p class="finish">{esc(p['finish'])}</p><div class="product-stock">Наличие уточняется</div><div class="product-bottom"><span class="product-price">{esc(current_price or 'Цену уточняйте')}</span><small class="price-note">Стоимость подтвердит менеджер</small><button class="add-product" data-product="{esc(p['url'])}" aria-label="Добавить {esc(p['article'])} в заявку"><span>В заявку</span>{icon('plus')}</button></div></div></article>'''
 
 def breadcrumb(crumbs):
     return '<nav class="breadcrumb" aria-label="Хлебные крошки"><a href="/">Главная</a>'+''.join(f'<span aria-hidden="true">/</span>'+ (f'<span aria-current="page">{esc(n)}</span>' if i==len(crumbs)-1 else f'<a href="{esc(u)}">{esc(n)}</a>') for i,(n,u) in enumerate(crumbs))+'</nav>'
