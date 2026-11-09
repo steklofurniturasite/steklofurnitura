@@ -3770,6 +3770,21 @@ footer {
   .cart-remove:active,.qty button:active { transform:none!important; }
 }
 
+/* Cross-document navigation is an enhancement; unsupported browsers retain normal links. */
+@view-transition { navigation:auto; }
+@keyframes motion-page-leave { to { opacity:0; } }
+@keyframes motion-page-arrive { from { opacity:0; } }
+::view-transition-old(root) {
+  animation:motion-page-leave 120ms ease-in both;
+}
+::view-transition-new(root) {
+  animation:motion-page-arrive 200ms var(--motion-out) both;
+}
+@media (prefers-reduced-motion:reduce) {
+  ::view-transition-old(root),::view-transition-new(root) {
+    animation-duration:.01ms!important;
+  }
+}
 @media(prefers-reduced-motion:reduce) {
   html {
     scroll-behavior:auto
