@@ -1,0 +1,36 @@
+[
+  {
+    "url": "https://www.steklofurnitura.by/assets/images/dorma/MUTO/MUTO Comfort M 60 каталог.pdf",
+    "status": 200,
+    "type": "application/pdf"
+  },
+  {
+    "url": "https://www.steklofurnitura.by/assets/images/dorma/catalog/Фурнитура для распашных и маятниковых дверей РУС.pdf",
+    "status": 200,
+    "type": "application/pdf"
+  },
+  {
+    "url": "https://www.steklofurnitura.by/assets/images/sp-slide/SP-800 Монтажная инструкция RUS.pdf",
+    "status": 200,
+    "type": "application/pdf"
+  },
+  {
+    "url": "https://www.steklofurnitura.by/assets/images/dorma/MUTO/MUTO Comfort XL DORMOTION.pdf",
+    "status": 200,
+    "type": "application/pdf"
+  },
+  {
+    "url": "https://www.steklofurnitura.by/assets/images/hag/HAG 500 installation instruction.pdf",
+    "status": 200,
+    "type": "application/pdf"
+  },
+  {
+    "url": "https://www.steklofurnitura.by/assets/images/dorma/MUTO/Монтажная инструкция MUTO-Comf-DORMO-L-80.pdf",
+    "status": 200,
+    "type": "application/pdf"
+  },
+  {
+    "url": "http://products.dorma.com/content/download/40565/447101/0403 ul light.pdf",
+    "status": 403
+  }
+]
