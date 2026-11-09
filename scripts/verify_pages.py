@@ -12,6 +12,7 @@ out = ROOT / (sys.argv[2] if len(sys.argv) > 2 else '.github-pages')
 for name in ['index.html', 'catalog.html', 'search.html', 'system/cart.html', 'contacts.html',
              'app.js', 'style.css', 'products.json', '.nojekyll', '404.html']:
     assert (out / name).is_file(), f'Missing required output: {name}'
+assert 'наименований на складе' not in (out/'index.html').read_text(), 'Unconfirmed homepage inventory'
 source = json.loads((ROOT/'dist/products.json').read_text())
 canonical = [{k:v for k,v in p.items() if k != 'route'} for p in source]
 digest = hashlib.sha256(json.dumps(canonical,ensure_ascii=False,sort_keys=True).encode()).hexdigest()
