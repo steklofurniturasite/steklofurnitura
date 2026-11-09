@@ -1504,7 +1504,13 @@ footer {
   display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:36px; padding-top:32px;
 }
 .product-gallery,.product-info {
-  align-self:start; background:var(--soft); border-top:3px solid var(--ink); padding:34px;
+  min-width:0;
+  align-self:start;
+  background:var(--soft);
+  border-top:3px solid var(--ink);
+}
+.product-gallery {
+  padding:34px;
 }
 .product-main-image {
   position:relative; display:flex; align-items:center; justify-content:center; height:540px; padding:48px; border:1px solid var(--line); background:white; cursor:zoom-in; overflow:hidden;
@@ -1556,8 +1562,6 @@ footer {
   box-shadow:inset 0 0 0 1px var(--accent)
 }
 .product-info {
-  align-self:start;
-  background:var(--soft);
   padding:32px
 }
 .product-info .eyebrow {

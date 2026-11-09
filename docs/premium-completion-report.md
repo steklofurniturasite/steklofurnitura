@@ -3,6 +3,8 @@
 База: `e71fb39e`. Резервная ветка: `backup/pre-premium-completion-2026-11-09`.
 Разработка: `design/premium-completion`. Работа выполнена одним исполнителем.
 [Опубликованный сайт](https://steklofurniturasite.github.io/steklofurnitura/).
+[Основная реализация](https://github.com/steklofurniturasite/steklofurnitura/commit/2dbf9ed305098e9a6a91aa323f2e23c1e3d326cb) ·
+[Коммиты рабочей ветки](https://github.com/steklofurniturasite/steklofurnitura/commits/design/premium-completion).
 
 ## Что обнаружено
 
@@ -100,7 +102,7 @@ CLS за окно наблюдения — **0 → 0**. Медиана p95 ин�
 Это локальный сравнительный тест, не полевые Core Web Vitals, не измерение INP
 и не гарантия compositor 60 FPS на физических телефонах.
 
-CSS gzip: 12 779 → 13 460 байт; JS gzip: 10 043 → 11 120 байт.
+CSS gzip: 12 779 → 13 462 байт; JS gzip: 10 043 → 11 120 байт.
 Добавлено суммарно около 1.8КБ gzip. Новых библиотек, шрифтов, тяжёлых фоновых
 эффектов или изображений нет. На данном стенде заметного ухудшения не выявлено.
 
