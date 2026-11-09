@@ -296,7 +296,7 @@
       <div class="product-content"><span class="product-article">${p.article}</span>
         <h3><a href="${p.url}">${p.name}</a></h3><p class="finish">${p.finish}</p>
         <div class="product-stock">Наличие уточняется</div>
-        <div class="product-bottom"><span class="product-price">${p.price || 'Цену уточняйте'}<small class="price-note">Стоимость подтвердит менеджер</small></span>
+        <div class="product-bottom"><span class="product-price">${p.price || 'Цену уточняйте'}</span><small class="price-note">Стоимость подтвердит менеджер</small>
           <button class="add-product" type="button" data-product="${p.url}" aria-label="Добавить ${p.article} в заявку">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
           </button></div>

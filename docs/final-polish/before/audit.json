@@ -1,0 +1,177 @@
+{
+  "report": [
+    {
+      "name": "home",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 6107,
+      "hero": 669.953125
+    },
+    {
+      "name": "catalog",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 3607
+    },
+    {
+      "name": "category",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 14339
+    },
+    {
+      "name": "subcategory",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 2623
+    },
+    {
+      "name": "product",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 2244
+    },
+    {
+      "name": "search",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 1943
+    },
+    {
+      "name": "cart",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 1082
+    },
+    {
+      "name": "contacts",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 1817
+    },
+    {
+      "name": "projects",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 10330
+    },
+    {
+      "name": "information",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 4430
+    },
+    {
+      "name": "article",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 2637
+    },
+    {
+      "name": "documents",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 1372,
+      "path": "/info/dokumenty.html"
+    },
+    {
+      "name": "home",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 9378,
+      "hero": 866.25
+    },
+    {
+      "name": "catalog",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 6756
+    },
+    {
+      "name": "category",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 21167
+    },
+    {
+      "name": "subcategory",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 3430
+    },
+    {
+      "name": "product",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 3664
+    },
+    {
+      "name": "search",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 3257
+    },
+    {
+      "name": "cart",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 1525
+    },
+    {
+      "name": "contacts",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 2931
+    },
+    {
+      "name": "projects",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 15718
+    },
+    {
+      "name": "information",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 5928
+    },
+    {
+      "name": "article",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 4770
+    },
+    {
+      "name": "documents",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 2085,
+      "path": "/info/dokumenty.html"
+    }
+  ],
+  "errors": []
+}

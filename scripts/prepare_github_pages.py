@@ -19,6 +19,8 @@ if out.exists():
     shutil.rmtree(out)
 shutil.copytree(source, out)
 for path in out.rglob('*'):
+    if 'vendor' in path.relative_to(out).parts:
+        continue
     if path.suffix not in {'.html', '.css', '.js', '.json'}:
         continue
     if path.name == 'products.json':
