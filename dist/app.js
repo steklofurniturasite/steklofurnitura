@@ -17,6 +17,9 @@
   const siteBase = scriptPath.slice(0, scriptPath.lastIndexOf(String.fromCharCode(47)));
   let productsPromise;
   let toastTimer;
+  let toastExitAnimation;
+  const menuExitAnimations = new WeakMap();
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   let cartRender = 0;
 
   async function getProducts() {
@@ -75,6 +78,10 @@
     const element = $('.toast');
     if (!element) return;
     clearTimeout(toastTimer);
+    if (toastExitAnimation) {
+      toastExitAnimation.cancel();
+      toastExitAnimation = undefined;
+    }
     element.replaceChildren(document.createTextNode(message));
     if (withCartLink) {
       const link = document.createElement('a');
@@ -86,6 +93,17 @@
     const dismiss = () => {
       if (element.contains(document.activeElement) || element.matches(':hover')) {
         toastTimer = setTimeout(dismiss, 1500);
+      } else if (!reducedMotion.matches && element.animate) {
+        const exiting = element.animate(
+          [{ opacity: 1, translate: '0 0' }, { opacity: 0, translate: '0 8px' }],
+          { duration: 180, easing: 'ease-in', fill: 'forwards' }
+        );
+        toastExitAnimation = exiting;
+        exiting.onfinish = () => {
+          if (toastExitAnimation !== exiting) return;
+          element.hidden = true;
+          toastExitAnimation = undefined;
+        };
       } else {
         element.hidden = true;
       }
@@ -96,9 +114,39 @@
   function showMenu(id, open, { trigger, moveFocus = false, restoreFocus = false } = {}) {
     const panel = document.getElementById(id);
     if (!panel) return;
-    const wasOpen = !panel.hidden;
+    const wasOpen = !panel.hidden && panel.dataset.closing !== 'true';
     if (open && trigger && !panel.contains(trigger)) menuOpeners.set(id, trigger);
-    panel.hidden = !open;
+    const previousExit = menuExitAnimations.get(panel);
+    if (previousExit) {
+      previousExit.cancel();
+      menuExitAnimations.delete(panel);
+    }
+    if (open) {
+      panel.hidden = false;
+      panel.removeAttribute('data-closing');
+      panel.style.pointerEvents = '';
+    } else if (!panel.hidden && !reducedMotion.matches && panel.animate) {
+      // Keep the panel rendered briefly for a smooth exit; prevent interaction.
+      panel.dataset.closing = 'true';
+      panel.style.pointerEvents = 'none';
+      const exiting = panel.animate(
+        [{ opacity: 1, transform: 'translateY(0)' },
+         { opacity: 0, transform: 'translateY(-7px)' }],
+        { duration: 160, easing: 'ease-in', fill: 'forwards' }
+      );
+      menuExitAnimations.set(panel, exiting);
+      exiting.onfinish = () => {
+        if (menuExitAnimations.get(panel) !== exiting) return;
+        panel.hidden = true;
+        panel.removeAttribute('data-closing');
+        panel.style.pointerEvents = '';
+        menuExitAnimations.delete(panel);
+      };
+    } else {
+      panel.hidden = true;
+      panel.removeAttribute('data-closing');
+      panel.style.pointerEvents = '';
+    }
     $$(`[data-toggle="${id}"]`).forEach(button => {
       button.setAttribute('aria-expanded', String(open));
       button.setAttribute('aria-controls', id);
@@ -144,7 +192,15 @@
   function selectProductImage(thumbnail) {
     const image = $('#detail-photo');
     if (!image || !thumbnail) return;
-    image.src = thumbnail.dataset.image;
+    if (image.src !== new URL(thumbnail.dataset.image, location.href).href) {
+      image.src = thumbnail.dataset.image;
+      if (!reducedMotion.matches && image.animate) {
+        image.animate(
+          [{ opacity: 0.65 }, { opacity: 1 }],
+          { duration: 230, easing: 'ease-out' }
+        );
+      }
+    }
     const zoom = image.closest('a[data-lightbox]');
     if (zoom) zoom.href = thumbnail.dataset.image;
     $$('.product-thumb[data-image]').forEach(button => {
@@ -220,7 +276,7 @@
       const id = toggle.dataset.toggle;
       const panel = document.getElementById(id);
       if (!panel) return;
-      const open = panel.hidden;
+      const open = panel.hidden || panel.dataset.closing === 'true';
       MENU_IDS.filter(other => other !== id).forEach(other => showMenu(other, false));
       showMenu(id, open, {
         trigger: toggle,
