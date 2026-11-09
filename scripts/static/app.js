@@ -298,7 +298,7 @@
         <div class="product-stock">Наличие уточняется</div>
         <div class="product-bottom"><span class="product-price">${p.price || 'Цену уточняйте'}</span><small class="price-note">Стоимость подтвердит менеджер</small>
           <button class="add-product" type="button" data-product="${p.url}" aria-label="Добавить ${p.article} в заявку">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            <span>В заявку</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
           </button></div>
       </div></article>`;
   }

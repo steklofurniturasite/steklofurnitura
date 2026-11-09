@@ -1,0 +1,231 @@
+{
+  "report": [
+    {
+      "name": "home",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 6101,
+      "hero": 664.8125
+    },
+    {
+      "name": "catalog",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 3608
+    },
+    {
+      "name": "category",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 14952
+    },
+    {
+      "name": "subcategory",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 2690
+    },
+    {
+      "name": "product",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 2270
+    },
+    {
+      "name": "search",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 1996
+    },
+    {
+      "name": "cart",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 1083
+    },
+    {
+      "name": "contacts",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 1967
+    },
+    {
+      "name": "projects",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 10332
+    },
+    {
+      "name": "information",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 4431
+    },
+    {
+      "name": "article",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 2638
+    },
+    {
+      "name": "documents",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 1373
+    },
+    {
+      "name": "about",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 3417
+    },
+    {
+      "name": "payment",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 1558
+    },
+    {
+      "name": "video",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 5008
+    },
+    {
+      "name": "notfound",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 1471
+    },
+    {
+      "name": "home",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 9254,
+      "hero": 810.25
+    },
+    {
+      "name": "catalog",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 6833
+    },
+    {
+      "name": "category",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 20594
+    },
+    {
+      "name": "subcategory",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 3428
+    },
+    {
+      "name": "product",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 3683
+    },
+    {
+      "name": "search",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 3317
+    },
+    {
+      "name": "cart",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 1603
+    },
+    {
+      "name": "contacts",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 3153
+    },
+    {
+      "name": "projects",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 15796
+    },
+    {
+      "name": "information",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 6006
+    },
+    {
+      "name": "article",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 4848
+    },
+    {
+      "name": "documents",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 2163
+    },
+    {
+      "name": "about",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 5430
+    },
+    {
+      "name": "payment",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 2386
+    },
+    {
+      "name": "video",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 3387
+    },
+    {
+      "name": "notfound",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 2290
+    }
+  ],
+  "errors": []
+}

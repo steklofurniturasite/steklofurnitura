@@ -1,0 +1,231 @@
+{
+  "report": [
+    {
+      "name": "home",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 7922,
+      "hero": 735.90625
+    },
+    {
+      "name": "catalog",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 3995
+    },
+    {
+      "name": "category",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 15544
+    },
+    {
+      "name": "subcategory",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 3175
+    },
+    {
+      "name": "product",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 2981
+    },
+    {
+      "name": "search",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 2639
+    },
+    {
+      "name": "cart",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 1655
+    },
+    {
+      "name": "contacts",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 2451
+    },
+    {
+      "name": "projects",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 13331
+    },
+    {
+      "name": "information",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 4962
+    },
+    {
+      "name": "article",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 3331
+    },
+    {
+      "name": "documents",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 1823
+    },
+    {
+      "name": "about",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 4012
+    },
+    {
+      "name": "payment",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 2014
+    },
+    {
+      "name": "video",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 4896
+    },
+    {
+      "name": "notfound",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "height": 1932
+    },
+    {
+      "name": "home",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 11121,
+      "hero": 931.171875
+    },
+    {
+      "name": "catalog",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 7543
+    },
+    {
+      "name": "category",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 23621
+    },
+    {
+      "name": "subcategory",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 4224
+    },
+    {
+      "name": "product",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 4392
+    },
+    {
+      "name": "search",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 4175
+    },
+    {
+      "name": "cart",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 2047
+    },
+    {
+      "name": "contacts",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 3605
+    },
+    {
+      "name": "projects",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 18872
+    },
+    {
+      "name": "information",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 6475
+    },
+    {
+      "name": "article",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 5014
+    },
+    {
+      "name": "documents",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 2490
+    },
+    {
+      "name": "about",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 5727
+    },
+    {
+      "name": "payment",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 2719
+    },
+    {
+      "name": "video",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 3687
+    },
+    {
+      "name": "notfound",
+      "width": 375,
+      "status": 200,
+      "overflow": false,
+      "height": 2597
+    }
+  ],
+  "errors": []
+}

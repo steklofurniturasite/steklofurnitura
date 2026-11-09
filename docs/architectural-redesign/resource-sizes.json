@@ -1,0 +1,15 @@
+{
+  "style.css": {
+    "before_raw": 62937,
+    "after_raw": 64325,
+    "before_gzip": 11279,
+    "after_gzip": 11786
+  },
+  "app.js": {
+    "before_raw": 19588,
+    "after_raw": 19616,
+    "before_gzip": 6453,
+    "after_gzip": 6461
+  },
+  "fonts_woff2_bytes": 38884
+}

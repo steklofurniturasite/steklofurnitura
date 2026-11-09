@@ -1,0 +1,20 @@
+{
+  "widths": [
+    320,
+    360,
+    375,
+    390,
+    430,
+    768,
+    1024,
+    1440,
+    1920
+  ],
+  "checkedLayouts": 108,
+  "map": "zoom/pan/reset/route/fallback with mocked tiles",
+  "sort": true,
+  "gallery": true,
+  "menu": true,
+  "reducedMotion": true,
+  "errors": []
+}
