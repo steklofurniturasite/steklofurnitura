@@ -748,6 +748,52 @@
     finally { button.disabled=false; }
   });
   $('#print-inquiry')?.addEventListener('click', () => window.print());
+  // Self-contained PDF export: canvas embeds Cyrillic without external fonts or libraries.
+  $('#save-inquiry-pdf')?.addEventListener('click', async event => {
+    const button=event.currentTarget;
+    button.disabled=true; button.setAttribute('aria-busy','true');
+    try {
+      await document.fonts.ready;
+      const pages=[]; let canvas,ctx,y;
+      const newPage=()=>{canvas=document.createElement('canvas');canvas.width=1240;canvas.height=1754;ctx=canvas.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,1240,1754);ctx.fillStyle='#202521';ctx.font='24px Arial';y=90;};
+      const finish=()=>pages.push(canvas.toDataURL('image/jpeg',.92).split(',')[1]);
+      newPage();
+      const text='Стеклофурнитура — заявка\n'+new Date().toLocaleDateString('ru-RU')+'\n\n'+inquiryText();
+      for(const paragraph of text.split('\n')) {
+        let line='';
+        for(const word of paragraph.split(' ')) {
+          // Split long URLs and articles too, keeping every character.
+          for(const char of (line ? ' ' : '')+word) {
+            if(ctx.measureText(line+char).width>1060) { if(y>1650){finish();newPage();} ctx.fillText(line,90,y);y+=34;line=''; }
+            line+=char;
+          }
+        }
+        if(y>1650){finish();newPage();} ctx.fillText(line,90,y);y+=34;
+      }
+      finish();
+      const encoder=new TextEncoder(),parts=[],offsets=[0];let length=0;
+      const append=value=>{const bytes=typeof value==='string'?encoder.encode(value):value;parts.push(bytes);length+=bytes.length;};
+      const object=(id,body)=>{offsets[id]=length;append(id+' 0 obj\n');body();append('\nendobj\n');};
+      append('%PDF-1.4\n');
+      object(1,()=>append('<< /Type /Catalog /Pages 2 0 R >>'));
+      object(2,()=>append('<< /Type /Pages /Count '+pages.length+' /Kids ['+pages.map((_,i)=>(3+i*3)+' 0 R').join(' ')+'] >>'));
+      pages.forEach((base64,i)=>{
+        const id=3+i*3,raw=atob(base64),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));
+        object(id,()=>append('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /XObject << /Photo '+(id+1)+' 0 R >> >> /Contents '+(id+2)+' 0 R >>'));
+        object(id+1,()=>{append('<< /Type /XObject /Subtype /Image /Width 1240 /Height 1754 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+bytes.length+' >>\nstream\n');append(bytes);append('\nendstream');});
+        const commands='q 595.28 0 0 841.89 0 0 cm /Photo Do Q';
+        object(id+2,()=>append('<< /Length '+commands.length+' >>\nstream\n'+commands+'\nendstream'));
+      });
+      const start=length;append('xref\n0 '+offsets.length+'\n0000000000 65535 f \n');
+      offsets.slice(1).forEach(offset=>append(String(offset).padStart(10,'0')+' 00000 n \n'));
+      append('trailer\n<< /Size '+offsets.length+' /Root 1 0 R >>\nstartxref\n'+start+'\n%%EOF');
+      const url=URL.createObjectURL(new Blob(parts,{type:'application/pdf'})),link=document.createElement('a');
+      link.href=url;link.download='steklofurnitura-zayavka.pdf';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+      toast('PDF заявки сохранён');
+    } catch {toast('Не удалось создать PDF. Воспользуйтесь печатью заявки.');}
+    finally {button.disabled=false;button.removeAttribute('aria-busy');}
+  });
+
 
   const sortControl = $('#sort-products');
   sortControl?.addEventListener('change', event => {

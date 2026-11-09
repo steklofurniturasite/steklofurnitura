@@ -5,7 +5,7 @@
  if(!element)return;
  const status=element.closest('.map-panel').querySelector('.map-status');
  const frame=document.createElement('iframe');
- frame.title='Яндекс Карты — СтеклоФурнитура, проспект Независимости, 177';
+ frame.title='Яндекс Карты — Стеклофурнитура, проспект Независимости, 177';
  frame.src='https://yandex.by/map-widget/v1/?ll=27.682951%2C53.945793&z=16&pt=27.682951%2C53.945793%2Cpm2rdm';
  frame.loading='lazy';
  frame.allowFullscreen=true;
