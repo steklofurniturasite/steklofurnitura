@@ -1,0 +1,20 @@
+{
+  "viewport": "375x850",
+  "cpuThrottle": 4,
+  "scenario": "4 mobile menu open/Escape cycles; rAF sampling during interaction",
+  "results": {
+    "before": {
+      "samples": 110,
+      "meanRafGapMs": 16.868181818208914,
+      "p95RafGapMs": 16.800000000000182,
+      "maxRafGapMs": 50
+    },
+    "after": {
+      "samples": 106,
+      "meanRafGapMs": 16.660377358490567,
+      "p95RafGapMs": 16.700000000000273,
+      "maxRafGapMs": 33.299999999999955
+    }
+  },
+  "limitation": "One Chromium cloud run. rAF gaps are not proof of composited FPS or performance on physical phones."
+}

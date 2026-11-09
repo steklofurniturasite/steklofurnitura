@@ -3,7 +3,8 @@
   'use strict';
 
   const $ = (selector, root = document) => root.querySelector(selector);
-  const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+  const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector))
+    .filter(element => !element.closest('.motion-exit, .motion-lightbox-exit'));
   const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
@@ -17,10 +18,139 @@
   const siteBase = scriptPath.slice(0, scriptPath.lastIndexOf(String.fromCharCode(47)));
   let productsPromise;
   let toastTimer;
-  let toastExitAnimation;
-  const menuExitAnimations = new WeakMap();
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   let cartRender = 0;
+
+  // Motion is progressive enhancement: state, focus and navigation never await it.
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const motionByElement = new WeakMap();
+  const runningMotion = new Set();
+  const exitLayers = new Map();
+  const addedTimers = new WeakMap();
+  const buttonLabels = new WeakMap();
+  const motionTheme = getComputedStyle(document.documentElement);
+  const token = (name, fallback) => parseFloat(motionTheme.getPropertyValue(name)) || fallback;
+  const motionTime = {
+    exit: token('--motion-exit', 160), feedback: token('--motion-feedback', 180),
+    quick: token('--motion-quick', 200), state: token('--motion-state', 220),
+    enter: token('--motion-enter', 240), dialog: token('--motion-dialog', 260),
+    medium: token('--motion-medium', 280), reorder: token('--motion-reorder', 300),
+    reveal: token('--motion-reveal', 480)
+  };
+  const motionEase = motionTheme.getPropertyValue('--ease').trim() || 'cubic-bezier(.22, .72, .24, 1)';
+
+  function animateUI(element, frames, { duration = motionTime.state, delay = 0 } = {}) {
+    if (!element) return null;
+    motionByElement.get(element)?.cancel();
+    if (reducedMotion.matches || typeof element.animate !== 'function') return null;
+    const animation = element.animate(frames, { duration, delay, easing: motionEase, fill: 'backwards' });
+    motionByElement.set(element, animation);
+    runningMotion.add(animation);
+    const finish = () => {
+      runningMotion.delete(animation);
+      if (motionByElement.get(element) === animation) motionByElement.delete(element);
+    };
+    animation.finished.then(finish, finish); // cancel() rejects finished; it is expected.
+    return animation;
+  }
+
+  function clearExit(element) {
+    const layer = exitLayers.get(element);
+    if (layer) {
+      motionByElement.get(layer)?.cancel();
+      layer.remove();
+      exitLayers.delete(element);
+    }
+  }
+
+  function animateExit(element, { lightbox = false } = {}) {
+    clearExit(element);
+    if (reducedMotion.matches || typeof element?.animate !== 'function') return;
+    const rect = element.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const style = lightbox ? getComputedStyle(element, '::backdrop') : getComputedStyle(element);
+    const opacity = Number(style.opacity);
+    let layer;
+    if (lightbox) {
+      layer = document.createElement('div');
+      layer.className = 'motion-lightbox-exit';
+      const image = $('img', element);
+      if (image) {
+        const box = image.getBoundingClientRect();
+        const copy = image.cloneNode();
+        copy.alt = '';
+        Object.assign(copy.style, { position: 'fixed', left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px` });
+        layer.append(copy);
+      }
+    } else {
+      layer = element.cloneNode(true);
+      layer.hidden = false;
+      layer.classList.add('motion-exit');
+      Object.assign(layer.style, { position: 'fixed', margin: '0', left: `${rect.left}px`, top: `${rect.top}px`, right: 'auto', bottom: 'auto', width: `${rect.width}px`, height: `${rect.height}px`, maxHeight: 'none', transform: 'none' });
+    }
+    // The exiting picture is never another interactive or accessible control.
+    layer.inert = true;
+    layer.setAttribute('aria-hidden', 'true');
+    layer.removeAttribute('role');
+    layer.removeAttribute('aria-live');
+    [layer, ...Array.from(layer.querySelectorAll('*'))].forEach(node => {
+      node.removeAttribute('id');
+      if (node.matches('a, button, input, select, textarea, [tabindex]')) node.setAttribute('tabindex', '-1');
+      [...node.attributes].filter(attribute => attribute.name.startsWith('data-')).forEach(attribute => node.removeAttribute(attribute.name));
+    });
+    document.body.append(layer);
+    exitLayers.set(element, layer);
+    const animation = animateUI(layer, [{ opacity: Number.isFinite(opacity) ? opacity : 1, translate: '0 0' }, { opacity: 0, translate: lightbox ? '0 0' : '0 -5px' }], { duration: motionTime.exit });
+    const remove = () => {
+      layer.remove();
+      if (exitLayers.get(element) === layer) exitLayers.delete(element);
+    };
+    if (animation) animation.finished.then(remove, remove);
+    else remove();
+  }
+
+  function capturePositions(elements, key = element => element) {
+    return new Map(elements.map(element => [key(element), element.getBoundingClientRect()]));
+  }
+
+  function animatePositions(before, elements, key = element => element) {
+    elements.forEach(element => motionByElement.get(element)?.cancel());
+    const positions = elements.map(element => ({ element, old: before.get(key(element)), next: element.getBoundingClientRect() }));
+    positions.filter(({ old, next }) => old && next.bottom > 0 && next.top < innerHeight).slice(0, 24).forEach(({ element, old, next }) => {
+      const x = old.left - next.left, y = old.top - next.top;
+      if (Math.abs(x) + Math.abs(y) <= 1) return;
+      if (old.bottom <= 0 || old.top >= innerHeight || Math.abs(y) > 240 || Math.abs(x) > innerWidth * .6) {
+        animateUI(element, [{ opacity: .6, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: motionTime.quick });
+      } else {
+        animateUI(element, [{ transform: `translate(${x}px, ${y}px)` }, { transform: 'translate(0, 0)' }], { duration: motionTime.reorder });
+      }
+    });
+  }
+
+  let revealObserver;
+  const revealed = new WeakSet();
+  function observeMotion() {
+    revealObserver?.disconnect();
+    if (reducedMotion.matches || typeof window.IntersectionObserver !== 'function') return;
+    revealObserver = new IntersectionObserver(entries => {
+      entries.filter(entry => entry.isIntersecting).forEach((entry, index) => {
+        revealObserver.unobserve(entry.target);
+        if (revealed.has(entry.target)) return;
+        revealed.add(entry.target);
+        // No hidden pending class: failed JS, disabled JS and fast scroll retain content.
+        animateUI(entry.target, [{ opacity: .55, transform: 'translateY(12px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: motionTime.reveal, delay: Math.min(index, 3) * 40 });
+      });
+    }, { threshold: 0, rootMargin: '0px 0px -20px 0px' });
+    $$('.section-heading, .category-card, .project-card, .resource-card, .all-categories > section, .contact-person, .full-project, .about-band > .wrap, .footer-lead').slice(0, 96).forEach(element => {
+      if (!revealed.has(element)) revealObserver.observe(element);
+    });
+  }
+  reducedMotion.addEventListener('change', () => {
+    if (reducedMotion.matches) {
+      runningMotion.forEach(animation => animation.cancel());
+      [...exitLayers.keys()].forEach(clearExit);
+    }
+    observeMotion();
+  });
 
   async function getProducts() {
     if (!productsPromise) {
@@ -68,7 +198,11 @@
 
   function updateCount() {
     const quantity = getCart().reduce((total, item) => total + item.qty, 0);
-    $$('.cart-count').forEach(element => { element.textContent = quantity; });
+    $$('.cart-count').forEach(element => {
+      const changed = element.textContent !== String(quantity);
+      element.textContent = quantity;
+      if (changed) animateUI(element, [{ transform: 'scale(.85)' }, { transform: 'scale(1.12)', offset: .5 }, { transform: 'scale(1)' }], { duration: motionTime.medium });
+    });
     $$('.cart-link').forEach(element => {
       element.setAttribute('aria-label', `Ваша заявка. Количество: ${quantity}`);
     });
@@ -77,11 +211,13 @@
   function toast(message, withCartLink = false) {
     const element = $('.toast');
     if (!element) return;
+    const wasVisible = !element.hidden;
+    const currentStyle = getComputedStyle(element);
+    const fromOpacity = wasVisible ? Number(currentStyle.opacity) : 0;
+    const fromTranslate = wasVisible ? currentStyle.translate : '0 8px';
     clearTimeout(toastTimer);
-    if (toastExitAnimation) {
-      toastExitAnimation.cancel();
-      toastExitAnimation = undefined;
-    }
+    clearExit(element);
+    motionByElement.get(element)?.cancel();
     element.replaceChildren(document.createTextNode(message));
     if (withCartLink) {
       const link = document.createElement('a');
@@ -90,21 +226,12 @@
       element.append(document.createTextNode(' '), link);
     }
     element.hidden = false;
+    animateUI(element, [{ opacity: fromOpacity, translate: fromTranslate }, { opacity: 1, translate: '0 0' }], { duration: motionTime.state });
     const dismiss = () => {
       if (element.contains(document.activeElement) || element.matches(':hover')) {
         toastTimer = setTimeout(dismiss, 1500);
-      } else if (!reducedMotion.matches && element.animate) {
-        const exiting = element.animate(
-          [{ opacity: 1, translate: '0 0' }, { opacity: 0, translate: '0 8px' }],
-          { duration: 180, easing: 'ease-in', fill: 'forwards' }
-        );
-        toastExitAnimation = exiting;
-        exiting.onfinish = () => {
-          if (toastExitAnimation !== exiting) return;
-          element.hidden = true;
-          toastExitAnimation = undefined;
-        };
       } else {
+        animateExit(element);
         element.hidden = true;
       }
     };
@@ -114,39 +241,13 @@
   function showMenu(id, open, { trigger, moveFocus = false, restoreFocus = false } = {}) {
     const panel = document.getElementById(id);
     if (!panel) return;
-    const wasOpen = !panel.hidden && panel.dataset.closing !== 'true';
+    const wasOpen = !panel.hidden;
     if (open && trigger && !panel.contains(trigger)) menuOpeners.set(id, trigger);
-    const previousExit = menuExitAnimations.get(panel);
-    if (previousExit) {
-      previousExit.cancel();
-      menuExitAnimations.delete(panel);
-    }
-    if (open) {
-      panel.hidden = false;
-      panel.removeAttribute('data-closing');
-      panel.style.pointerEvents = '';
-    } else if (!panel.hidden && !reducedMotion.matches && panel.animate) {
-      // Keep the panel rendered briefly for a smooth exit; prevent interaction.
-      panel.dataset.closing = 'true';
-      panel.style.pointerEvents = 'none';
-      const exiting = panel.animate(
-        [{ opacity: 1, transform: 'translateY(0)' },
-         { opacity: 0, transform: 'translateY(-7px)' }],
-        { duration: 160, easing: 'ease-in', fill: 'forwards' }
-      );
-      menuExitAnimations.set(panel, exiting);
-      exiting.onfinish = () => {
-        if (menuExitAnimations.get(panel) !== exiting) return;
-        panel.hidden = true;
-        panel.removeAttribute('data-closing');
-        panel.style.pointerEvents = '';
-        menuExitAnimations.delete(panel);
-      };
-    } else {
-      panel.hidden = true;
-      panel.removeAttribute('data-closing');
-      panel.style.pointerEvents = '';
-    }
+    if (open) clearExit(panel);
+    if (wasOpen && !open) animateExit(panel);
+    motionByElement.get(panel)?.cancel();
+    panel.hidden = !open;
+    if (open && !wasOpen) animateUI(panel, [{ opacity: 0, translate: '0 -8px' }, { opacity: 1, translate: '0 0' }], { duration: motionTime.enter });
     $$(`[data-toggle="${id}"]`).forEach(button => {
       button.setAttribute('aria-expanded', String(open));
       button.setAttribute('aria-controls', id);
@@ -189,20 +290,38 @@
     }
   }
 
+  let imageRevision = 0;
   function selectProductImage(thumbnail) {
     const image = $('#detail-photo');
     if (!image || !thumbnail) return;
-    if (image.src !== new URL(thumbnail.dataset.image, location.href).href) {
-      image.src = thumbnail.dataset.image;
-      if (!reducedMotion.matches && image.animate) {
-        image.animate(
-          [{ opacity: 0.65 }, { opacity: 1 }],
-          { duration: 230, easing: 'ease-out' }
-        );
-      }
+    image.removeAttribute('aria-busy');
+    const revision = ++imageRevision;
+    const next = thumbnail.dataset.image;
+    const preloader = new Image();
+    const apply = () => {
+      if (revision !== imageRevision) return;
+      image.removeAttribute('aria-busy');
+      image.src = next;
+      const zoom = image.closest('a[data-lightbox]');
+      if (zoom) zoom.href = next;
+      animateUI(image, [{ opacity: .65 }, { opacity: 1 }], { duration: motionTime.medium });
+    };
+    if (image.src !== new URL(next, location.href).href) {
+      image.setAttribute('aria-busy', 'true');
+      preloader.onload = apply;
+      preloader.onerror = () => {
+        if (revision !== imageRevision) return;
+        image.removeAttribute('aria-busy');
+        $$('.product-thumb[data-image]').forEach(button => {
+          const selected = new URL(button.dataset.image, location.href).href === image.src;
+          button.classList.toggle('is-active', selected);
+          button.setAttribute('aria-pressed', String(selected));
+        });
+        toast('Не удалось загрузить фотографию. Повторите выбор.');
+      };
+      preloader.src = next;
     }
-    const zoom = image.closest('a[data-lightbox]');
-    if (zoom) zoom.href = thumbnail.dataset.image;
+    // The zoom URL changes only together with the successfully loaded image.
     $$('.product-thumb[data-image]').forEach(button => {
       const selected = button === thumbnail;
       button.classList.toggle('is-active', selected);
@@ -223,24 +342,43 @@
     close.type = 'button';
     close.textContent = '×';
     close.setAttribute('aria-label', 'Закрыть изображение');
-    close.addEventListener('click', () => dialog.close());
+    [...exitLayers.keys()].filter(element => !element.isConnected).forEach(clearExit);
+    let cleaned = false;
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      dialog.remove();
+      if (link.isConnected) link.focus({ preventScroll: true });
+    };
+    const dismiss = () => { animateExit(dialog, { lightbox: true }); dialog.close(); cleanup(); };
+    close.addEventListener('click', dismiss);
+    dialog.addEventListener('cancel', event => { event.preventDefault(); dismiss(); });
     dialog.append(image, close);
     document.body.append(dialog);
     dialog.addEventListener('click', event => {
-      if (event.target === dialog) dialog.close();
+      if (event.target === dialog) dismiss();
     });
-    dialog.addEventListener('close', () => {
-      dialog.remove();
-      if (link.isConnected) link.focus({ preventScroll: true });
-    }, { once: true });
+    dialog.addEventListener('close', cleanup, { once: true });
     dialog.showModal();
+    const revealImage = () => {
+      if (dialog.open && image.isConnected) animateUI(image,
+        [{ opacity: .5, transform: 'translateY(8px) scale(.97)' }, { opacity: 1, transform: 'translateY(0) scale(1)' }], { duration: motionTime.dialog });
+    };
+    if (image.complete && image.naturalWidth) revealImage();
+    else image.addEventListener('load', revealImage, { once: true });
     close.focus();
   }
 
   async function addProduct(button) {
     if (button.disabled) return;
+    clearTimeout(addedTimers.get(button));
+    button.classList.remove('is-added', 'is-error');
     button.disabled = true;
     button.setAttribute('aria-busy', 'true');
+    if (!buttonLabels.has(button)) buttonLabels.set(button, button.innerHTML);
+    const originalLabel = buttonLabels.get(button);
+    button.textContent = 'Добавляем…';
+    let success = false;
     try {
       await getProducts();
       const product = productMap.get(button.dataset.product);
@@ -258,13 +396,21 @@
       if (existing) existing.qty = Math.min(MAX_QUANTITY, existing.qty + quantity);
       else cart.push({ url: product.url, qty: quantity });
       if (saveCart(cart)) {
+        success = true;
+        button.textContent = 'Добавлено ✓';
+        clearTimeout(addedTimers.get(button));
         button.classList.add('is-added');
-        setTimeout(() => button.classList.remove('is-added'), 1600);
+        animateUI(button, [{ transform: 'scale(.97)' }, { transform: 'scale(1)' }], { duration: motionTime.feedback });
+        addedTimers.set(button, setTimeout(() => { button.classList.remove('is-added'); button.innerHTML = originalLabel; }, 1600));
         toast('Товар добавлен в заявку.', true);
       }
     } catch {
+      button.classList.add('is-error');
+      button.textContent = 'Повторить';
+      addedTimers.set(button, setTimeout(() => { button.classList.remove('is-error'); button.innerHTML = originalLabel; }, 1600));
       toast('Не удалось загрузить товар. Нажмите кнопку ещё раз.');
     } finally {
+      if (!success && !button.classList.contains('is-error')) button.innerHTML = originalLabel;
       button.disabled = false;
       button.removeAttribute('aria-busy');
     }
@@ -276,7 +422,7 @@
       const id = toggle.dataset.toggle;
       const panel = document.getElementById(id);
       if (!panel) return;
-      const open = panel.hidden || panel.dataset.closing === 'true';
+      const open = panel.hidden;
       MENU_IDS.filter(other => other !== id).forEach(other => showMenu(other, false));
       showMenu(id, open, {
         trigger: toggle,
@@ -309,9 +455,12 @@
     const remove = event.target.closest('[data-remove]');
     if (remove) {
       const rows = $$('.cart-row');
+      const before = capturePositions(rows, row => row.dataset.cartUrl);
       const index = rows.indexOf(remove.closest('.cart-row'));
       if (saveCart(getCart().filter(item => item.url !== remove.dataset.remove))) {
+        animateExit(remove.closest('.cart-row'));
         await renderCart();
+        animatePositions(before, $$('.cart-row'), row => row.dataset.cartUrl);
         const remaining = $$('.cart-remove');
         (remaining[Math.min(index, remaining.length - 1)] || $('#cart-content .button'))?.focus();
         toast('Товар удалён из заявки');
@@ -387,6 +536,7 @@
       summary.textContent = `По запросу «${query}» найдено товаров: ${matches.length}`;
       results.innerHTML = matches.length ? matches.map(productCard).join('') :
         '<div class="empty-state"><h2>Ничего не найдено</h2><p>Попробуйте другой артикул или более короткое название.</p><a class="button" href="/catalog.html">Открыть каталог</a></div>';
+      animateUI(results, [{ opacity: .6 }, { opacity: 1 }], { duration: motionTime.quick });
     } catch {
       summary.textContent = 'Не удалось выполнить поиск.';
       results.innerHTML = errorState('Проверьте подключение к интернету и повторите поиск.', 'search');
@@ -473,6 +623,7 @@
     const grid = $('.catalog-products');
     if (!grid) return;
     const cards = $$('.product-card', grid);
+    const before = capturePositions(cards);
     cards.forEach((card, index) => { if (card.dataset.order === undefined) card.dataset.order = index; });
     const key = event.target.value;
     cards.sort((a, b) => {
@@ -481,6 +632,7 @@
       return $(selector, a).textContent.localeCompare($(selector, b).textContent, 'ru', { numeric: true });
     });
     grid.append(...cards);
+    animatePositions(before, cards);
   });
 
   window.addEventListener('storage', event => {
@@ -489,7 +641,17 @@
       renderCart();
     }
   });
+  document.addEventListener('toggle', event => {
+    const details = event.target;
+    if (!details.matches?.('details.company-details, details.catalog-nav') || !details.open) return;
+    const content = $('.prose, .sidebar', details);
+    animateUI(content, [{ opacity: .6, transform: 'translateY(-4px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: motionTime.state });
+  }, true);
   updateCount();
   search();
   renderCart();
+  observeMotion();
+  // Transform-only entrance keeps the hero text visible and avoids an opacity gate on LCP.
+  $$('.hero-heading, .product-heading, .page-title').forEach(element => animateUI(element,
+    [{ transform: 'translateY(8px)' }, { transform: 'translateY(0)' }], { duration: motionTime.reveal }));
 })();

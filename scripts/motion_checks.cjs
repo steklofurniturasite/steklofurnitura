@@ -1,60 +1,75 @@
-/* Motion regression: entry, exit, rapid interruption and reduced-motion. */
+/* Motion regressions assert state/focus and interruption, rather than pixel timing. */
 const {chromium}=require('playwright');
-const assert=require('node:assert/strict');
+const assert=require('assert/strict');
+const fs=require('fs');
 (async()=>{
- const browser=await chromium.launch({
-  executablePath:process.env.CHROMIUM_PATH||undefined,
-  headless:true,args:['--no-sandbox']
- });
- try{
-  const page=await browser.newPage({viewport:{width:1440,height:900}});
-  const origin=process.env.TEST_ORIGIN||'http://127.0.0.1:8000';
-  const base=process.env.TEST_BASE===undefined?'/steklofurnitura':process.env.TEST_BASE;
-  const errors=[];
-  page.on('pageerror',e=>errors.push(e.message));
-  await page.goto(origin+base+'/');
-  const menu=page.locator('#catalog-menu');
-  const toggle=page.locator('[data-toggle="catalog-menu"]').first();
-  assert.equal(await menu.isHidden(),true);
-  await toggle.click();
-  assert.equal(await menu.isVisible(),true);
-  assert.equal(await toggle.getAttribute('aria-expanded'),'true');
-  assert((await menu.evaluate(e=>getComputedStyle(e).animationName)).includes('motion-panel-enter'));
-  await toggle.click();
-  assert.equal(await toggle.getAttribute('aria-expanded'),'false');
-  await page.waitForTimeout(260);
-  assert.equal(await menu.isHidden(),true);
-  // Rapid reopening must cancel a pending exit rather than close the panel later.
-  await toggle.click();
-  await toggle.click();
-  await toggle.click();
-  await page.waitForTimeout(300);
-  assert.equal(await menu.isVisible(),true);
-  assert.equal(await toggle.getAttribute('aria-expanded'),'true');
-  await page.keyboard.press('Escape');
-  await page.waitForTimeout(240);
-  assert.equal(await menu.isHidden(),true);
-  // Reduced-motion must close instantly without a delayed animation.
-  await page.emulateMedia({reducedMotion:'reduce'});
-  await toggle.click();
-  assert.equal(await menu.isVisible(),true);
-  await toggle.click();
-  assert.equal(await menu.isHidden(),true);
-  assert.equal(await toggle.getAttribute('aria-expanded'),'false');
-  // Product card remains visible; hover is never needed to reveal it.
-  assert(await page.locator('.product-card').first().isVisible());
-  // Check desktop and mobile styles at representative sizes.
-  for(const width of [375,1440]){
-   await page.setViewportSize({width,height:850});
-   await page.goto(origin+base+'/');
-   const metrics=await page.evaluate(()=>({
-     viewport:window.innerWidth,
-     document:document.documentElement.scrollWidth
-   }));
-   console.log('Motion responsive layout',width,metrics);
-   assert(metrics.document<=metrics.viewport+1, 'overflow at '+width+'px');
-  }
-  assert.deepEqual(errors,[]);
-  console.log('PASS: motion menus, rapid interruption, keyboard, reduced-motion, layouts');
- }finally{await browser.close();}
+ const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,args:['--no-sandbox']});
+ const context=await browser.newContext();
+ const page=await context.newPage();
+ const base=(process.env.TEST_ORIGIN||'http://127.0.0.1:8000')+(process.env.TEST_BASE===undefined?'/steklofurnitura':process.env.TEST_BASE);
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const products=JSON.parse(fs.readFileSync('dist/products.json'));
+ const product=products.find(p=>p.article==='SR-670 32x325x500 SSS');
+ await page.setViewportSize({width:375,height:900});
+ await page.goto(base+'/');
+ const opener=page.locator('[data-toggle="mobile-nav"]');
+ await opener.click();assert.equal(await opener.getAttribute('aria-expanded'),'true');
+ assert(await page.locator('#mobile-nav').evaluate(e=>e.getAnimations().length>0));
+ await page.keyboard.press('Escape');
+ assert(!(await page.locator('#mobile-nav').isVisible()));
+ assert(await opener.evaluate(e=>document.activeElement===e));
+ assert(await page.locator('.motion-exit').evaluateAll(es=>es.every(e=>e.inert&&e.getAttribute('aria-hidden')==='true'&&!e.querySelector('[id], [data-toggle]'))));
+ await opener.click();await page.keyboard.press('Escape');await opener.click();
+ await page.waitForTimeout(350);
+ assert(await page.locator('#mobile-nav').isVisible());assert.equal(await page.locator('.motion-exit').count(),0);
+ await page.keyboard.press('Escape');
+ // Runtime accessibility preference must cancel active animations and transient layers.
+ await opener.click();await page.emulateMedia({reducedMotion:'reduce'});
+ await page.waitForFunction(()=>document.getAnimations().every(a=>a.playState!=='running'));
+ await page.keyboard.press('Escape');assert.equal(await page.locator('.motion-exit').count(),0);
+ await page.goto(base+'/');assert(await page.locator('.hero-heading').isVisible());
+ assert(await page.evaluate(()=>getComputedStyle(document.documentElement).scrollBehavior==='auto'));
+ await page.locator('.product-photo').first().hover();
+ assert.equal(await page.locator('.product-photo img').first().evaluate(e=>getComputedStyle(e).scale),'1');
+ await page.emulateMedia({reducedMotion:'no-preference'});
+ await page.goto(base+product.url);await page.locator('.product-thumb').nth(1).click();await page.locator('.product-thumb').nth(2).click();
+ assert.equal(await page.locator('.product-thumb[aria-pressed="true"]').count(),1);
+ const selected=await page.locator('.product-thumb').nth(2).getAttribute('data-image');
+ await page.waitForFunction(src=>document.querySelector('#detail-photo').getAttribute('src').endsWith(src),selected);
+ await page.locator('[data-lightbox]').first().click();assert(await page.locator('dialog').isVisible());
+ await page.keyboard.press('Escape');assert.equal(await page.locator('dialog').count(),0);
+ assert(await page.locator('[data-lightbox]').first().evaluate(e=>document.activeElement===e));
+ await page.waitForTimeout(300);assert.equal(await page.locator('.motion-lightbox-exit').count(),0);
+ await page.locator('.order-actions [data-product]').click();
+ await page.waitForFunction(()=>document.querySelector('.order-actions [data-product]').classList.contains('is-added'));
+ await page.waitForFunction(()=>JSON.parse(localStorage.getItem('steklofurnitura-inquiry')||'[]').length===1);
+ await page.goto(base+'/system/cart.html');await page.locator('.cart-row').waitFor();
+ await page.locator('.cart-remove').click();await page.waitForFunction(()=>document.querySelector('#cart-content .empty-state'));
+ await page.waitForTimeout(300);assert.equal(await page.locator('.motion-exit').count(),0);
+ assert(await page.locator('#cart-content .button').evaluate(e=>document.activeElement===e));
+ await page.setViewportSize({width:1440,height:960});
+ await page.goto(base+'/catalog/dvernye-dovodchiki/');
+ await page.locator('#sort-products').selectOption('name');await page.locator('#sort-products').selectOption('article');
+ await page.waitForTimeout(380);
+ const articles=await page.locator('.catalog-products .product-article').allTextContents();
+ assert.deepEqual(articles,[...articles].sort((a,b)=>a.localeCompare(b,'ru',{numeric:true})));
+ assert.equal(await page.locator('.motion-exit, .motion-lightbox-exit').count(),0);
+ assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+ // Absent APIs and disabled JS must never leave visually gated content.
+ const fallback=await browser.newContext();
+ await fallback.addInitScript(()=>{Element.prototype.animate=undefined;window.IntersectionObserver=undefined;});
+ const f=await fallback.newPage();f.on('pageerror',e=>errors.push(e.message));await f.goto(base+'/');assert(await f.locator('h1').isVisible());
+ await f.locator('[data-toggle="catalog-menu"]').first().click();assert(await f.locator('#catalog-menu').isVisible());await f.keyboard.press('Escape');assert(!(await f.locator('#catalog-menu').isVisible()));
+ const noJS=await browser.newContext({javaScriptEnabled:false});const n=await noJS.newPage();await n.goto(base+'/');assert(await n.locator('h1').isVisible());assert(await n.locator('.hero-buttons .button').isVisible());
+ const failure=await browser.newContext();const e=await failure.newPage();
+ await e.route('**/products.json',async r=>{await new Promise(resolve=>setTimeout(resolve,250));await r.fulfill({status:503,body:'offline'});});
+ await e.goto(base+product.url);await e.locator('.order-actions [data-product]').click();
+ assert.equal((await e.locator('.order-actions [data-product]').innerText()).trim(),'Добавляем…');
+ await e.waitForFunction(()=>!document.querySelector('.order-actions [data-product]').disabled);
+ assert(!(await e.locator('.order-actions [data-product]').evaluate(el=>el.classList.contains('is-added'))));
+ assert((await e.locator('.toast:not(.motion-exit)').innerText()).includes('Не удалось'));
+ assert.equal(await e.evaluate(()=>JSON.parse(localStorage.getItem('steklofurnitura-inquiry')||'[]').length),0);
+ assert.deepEqual(errors,[]);
+ await browser.close();
+ console.log('PASS: animated menus, rapid reversal, Escape/focus, reduced motion at runtime, gallery switching, add/remove feedback, sorting, missing APIs and disabled-JS visibility');
 })().catch(e=>{console.error(e);process.exit(1)});

@@ -43,7 +43,7 @@ const assert = require('assert/strict');
     assert.equal(await page.locator('.sale-label').count(),0);
    }
    assert.equal(await page.locator('img').evaluateAll(imgs=>imgs.filter(i=>i.complete&&i.naturalWidth===0).length),0);
-   await page.screenshot({path:`${screenshots}/${name}-${width}.png`,fullPage:true});
+   await page.screenshot({path:`${screenshots}/${name}-${width}.png`,fullPage:true,animations:'disabled'});
   }
  }
  assert.deepEqual(errors,[]);await browser.close();console.log('PASS: network recovery, searches, 3 enquiry URLs, cart CRUD/persistence, 12 layouts, images, no JS errors');
