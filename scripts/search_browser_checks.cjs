@@ -5,8 +5,13 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  const check=(condition,message)=>{assert(condition,message);checks++;};
  const idle=()=>p.waitForFunction(()=>document.querySelector('#search-results')?.getAttribute('aria-busy')==='false');
  let requests=0;await p.route('**/products.json',async r=>{requests++;await r.continue();});
- await p.goto(base+'/');const input=p.locator('form.search input');await input.fill('SP1009');
+ await p.goto(base+'/');const input=p.locator('form.search input');
+ const cdp=await context.newCDPSession(p);await cdp.send('Emulation.setCPUThrottlingRate',{rate:4});
+ const coldStart=performance.now();await input.fill('SP1009');
  await p.locator('.search-suggestions [role="option"]').first().waitFor();check(await input.getAttribute('aria-expanded')==='true','expanded');
+ const coldMs=performance.now()-coldStart;check(coldMs<3000,'first suggestions within 3s at 4x CPU (local network)');console.log('Cold mobile suggestions, 4x CPU/local network: '+coldMs.toFixed(0)+'ms');await cdp.send('Emulation.setCPUThrottlingRate',{rate:1});
+ // Rapid scripted document hops test search state; motion has its own regression suite.
+ await p.emulateMedia({reducedMotion:'reduce'});
  check(await p.locator('.search-suggestions [role="option"]').count()<=6,'bounded suggestions');
  await input.press('ArrowUp');check((await input.getAttribute('aria-activedescendant')).endsWith('-'+(await p.locator('.search-suggestions [role="option"]').count()-1)),'up selects last');await input.press('ArrowDown');check((await input.getAttribute('aria-activedescendant')).endsWith('-0'),'down wraps to first');
  await input.press('Escape');check(await input.getAttribute('aria-expanded')==='false','escape closes');
@@ -21,6 +26,14 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  await p.locator('#search-more').click();check(await p.locator('#search-results .product-card').count()===60,'second page 60');
  const filters=p.locator('[data-search-filter]');check(await filters.count()>0,'filters available');
  const filter=filters.first();const option=await filter.locator('option').nth(1).getAttribute('value');await filter.selectOption(option);check(await p.locator('#search-results .product-card').count()<=30,'filtered pagination reset');
+ const labels=await p.locator('[data-search-filter="brand"] option').allTextContents();
+ check(labels.every(label=>['Все','Titan','DORMA','StifGlass','HAG'].includes(label)),'brand labels casing');
+ for(const [q,article] of [['TT505A SSS','TT-505А SSS'],['SP1009ALSSS','SP-1009 AL+SSS']]){await p.goto(base+'/search.html?q='+encodeURIComponent(q));await idle();check((await p.locator('#search-results .product-article').first().innerText())===article,'formatted code UI '+q);}
+ for(const q of ['заглушки','уплотнители','кронштейны']){await p.goto(base+'/search.html?q='+encodeURIComponent(q));await idle();check(await p.locator('#search-results .product-card').count()>0,'plural UI '+q);}
+ // The shared folder contains two explicitly HAG articles; a brand filter must retain them.
+ await p.goto(base+'/search.html?q=профиль');await idle();await p.locator('[data-search-filter="brand"]').selectOption('hag');
+ while(await p.locator('#search-more').isVisible())await p.locator('#search-more').click();
+ for(const article of ['HAG PS-16S','HAG PS-8S'])check((await p.locator('#search-results .product-article').allTextContents()).includes(article),'HAG UI filter '+article);
  const query=p.locator('#search-query');await query.fill('SP1009');await p.waitForFunction(()=>document.querySelector('#search-summary').textContent.includes('SP1009'));await idle();check(await p.locator('#search-results .product-card').count()>0,'live results');
  await query.fill('zzzzzzNORESULT');await query.fill('SR670');await p.waitForFunction(()=>document.querySelector('#search-summary').textContent.includes('SR670'));check(await p.locator('#search-results .product-card').count()>0,'latest input wins');
  await p.locator('.large-search .search-clear').click();await p.waitForFunction(()=>document.querySelector('#search-results').children.length===0);checks++;

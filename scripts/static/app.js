@@ -326,7 +326,7 @@
       clear.hidden=!input.value;clearTimeout(timer);close();
       timer=setTimeout(()=>{if(isResults){history.replaceState(null,'',location.pathname+'?q='+encodeURIComponent(input.value.trim()));search();}else suggest();},180);
     });
-    input.addEventListener('focus',()=>{if(!isResults&&input.value.trim())suggest();});
+    input.addEventListener('focus',()=>{getSearchEngine().catch(()=>{});if(!isResults&&input.value.trim())suggest();});
     clear.addEventListener('click',()=>{input.value='';input.dispatchEvent(new Event('input'));input.focus();});
     input.addEventListener('keydown',event=>{
       if(event.key==='Escape'){event.preventDefault();clearTimeout(timer);close();}
@@ -692,7 +692,7 @@
         if(values.length<2)continue;
         const wrapper=document.createElement('label');wrapper.append(document.createTextNode(label+' '));const select=document.createElement('select');select.dataset.searchFilter=key;
         const all=document.createElement('option');all.value='';all.textContent='Все';select.append(all);
-        values.forEach(value=>{const option=document.createElement('option');option.value=value;option.textContent=value;select.append(option);});wrapper.append(select);filters.append(wrapper);
+        values.forEach(value=>{const option=document.createElement('option');option.value=value;option.textContent=key==='brand'?SFSearch.brandLabels[value]:value;select.append(option);});wrapper.append(select);filters.append(wrapper);
       }
       filters.hidden=!filters.children.length;
       filters.onchange=()=>{const selected=Object.fromEntries($$('select',filters).map(select=>[select.dataset.searchFilter,select.value]));searchMatches=engine.find(query,selected);renderSearchPage();};

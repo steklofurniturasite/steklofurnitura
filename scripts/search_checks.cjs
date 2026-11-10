@@ -29,5 +29,29 @@ const ranked=S.create([
  {article:'AB-12',name:'Держатель',finish:''}
 ]);
 check(JSON.stringify(ranked.find('AB-12').map(r=>r.rank))===JSON.stringify([0,1,2,3,4,5,6]),'seven ranking tiers');
+// PR #2 regression fixes: exact inflections, code lookalikes, plus and brand evidence.
+for(const [singular,plural] of [['заглушка','заглушки'],['уплотнитель','уплотнители'],['кронштейн','кронштейны']]) {
+ const single=engine.find(singular).map(r=>r.product.url).sort(),multiple=engine.find(plural).map(r=>r.product.url).sort();
+ check(single.length>0,'noun has results '+singular);
+ check(JSON.stringify(single)===JSON.stringify(multiple),'noun forms equivalent '+plural);
+}
+for(const word of ['заглушкин','уплотнительность','кронштейнер'])check(S.term(word)===word,'unrelated word retained '+word);
+for(const [query,article] of [['TT505A SSS','TT-505А SSS'],['SP1009ALSSS','SP-1009 AL+SSS']]) {
+ const found=engine.find(query);check(found[0]?.product.article===article,'code regression '+query);
+ check(engine.find(article)[0].raw===S.text(article),'raw code still first '+article);
+}
+for(const [a,b] of [['TT505Б','TT505B'],['AB10','AB1O'],['AB12X','AB12'],['AB12/3','AB123'],['AB12*3','AB123']])check(S.article(a)!==S.article(b),'significant code retained '+a);
+for(const [a,b] of [['ТТ-505А','TT505A'],['КР-12Н','KP12H'],['SP-1009 AL+SSS','SP1009ALSSS']])check(S.article(a)===S.article(b),'visual/separator alias '+a);
+const lookalikeFixture=S.create([{url:'/latin',article:'TT-505A SSS',name:'Крепление'}, {url:'/cyrillic',article:'TT-505А SSS',name:'Крепление'}, {url:'/different',article:'TT-505Б SSS',name:'Крепление'}]);
+check(lookalikeFixture.find('TT-505A SSS')[0].product.url==='/latin','Latin exact outranks normalized');
+check(lookalikeFixture.find('TT-505А SSS')[0].product.url==='/cyrillic','Cyrillic exact outranks normalized');
+check(!lookalikeFixture.find('TT505A SSS').some(r=>r.product.url==='/different'),'nonvisual Cyrillic letter distinct');
+for(const article of ['HAG PS-16S','HAG PS-8S']) {
+ check(engine.entries.find(r=>r.product.article===article)?.brand==='hag','article brand wins '+article);
+ check(engine.find('HAG',{brand:'hag'}).some(r=>r.product.article===article),'HAG filter retains '+article);
+ check(!engine.find('StifGlass').some(r=>r.product.article===article),'folder brand suppressed '+article);
+}
+check(engine.find('HAG').length===engine.find('HAG',{brand:'hag'}).length,'HAG search/filter agree');
+check(JSON.stringify(Object.values(S.brandLabels))===JSON.stringify(['Titan','DORMA','StifGlass','HAG']),'brand label casing');
 const start=performance.now();for(let i=0;i<100;i++)engine.find(i%2?'душевой хром':'SP1009');
 console.log(`PASS: ${passed} assertions, ${products.length} articles and format variants; 100 queries ${(performance.now()-start).toFixed(0)}ms`);
