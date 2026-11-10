@@ -271,13 +271,78 @@
   }
   compactCatalogue.addEventListener('change', syncCatalogueNavigation);
   syncCatalogueNavigation();
-  $$('form.search, form.large-search').forEach(form => {
-    form.addEventListener('submit', event => {
-      event.preventDefault();
-      const query = $('input[name="q"]', form).value.trim();
-      location.assign('/search.html?q=' + encodeURIComponent(query));
+  let searchEnginePromise;
+  function getSearchEngine() {
+    if (!searchEnginePromise) searchEnginePromise=Promise.all([
+      getProducts(), fetch('/search-categories.json').then(response=>{if(!response.ok) throw new Error('Search metadata unavailable');return response.json();})
+    ]).then(([products,categories])=>SFSearch.create(products,categories)).catch(error=>{searchEnginePromise=undefined;throw error;});
+    return searchEnginePromise;
+  }
+  function highlight(element,query,isArticle=false) {
+    const value=element.textContent;
+    element.replaceChildren();
+    if(isArticle && SFSearch.article(query) && SFSearch.article(value).startsWith(SFSearch.article(query))) {
+      const mark=document.createElement('mark');mark.textContent=value;element.append(mark);return;
+    }
+    const terms=SFSearch.words(query);
+    for(const part of value.split(/([\p{L}\p{N}]+)/u)) {
+      const matched=terms.some(t=>SFSearch.term(part).startsWith(t));
+      const node=matched?document.createElement('mark'):document.createTextNode(part);
+      if(matched) node.textContent=part;
+      element.append(node);
+    }
+  }
+  const closeSearchSuggestions=[];
+  $$('form.search, form.large-search').forEach((form,index) => {
+    const input=$('input[name="q"]',form),isResults=form.classList.contains('large-search');
+    input.autocomplete='off';input.maxLength=200;
+    const clear=document.createElement('button');clear.type='button';clear.className='search-clear';clear.textContent='×';clear.setAttribute('aria-label','Очистить поиск');clear.hidden=!input.value;
+    input.after(clear);
+    const list=document.createElement('div');list.id=`search-options-${index}`;list.className='search-suggestions';list.setAttribute('role','listbox');list.setAttribute('aria-label','Подсказки товаров');list.hidden=true;
+    const status=document.createElement('span');status.className='search-sr-status';status.setAttribute('role','status');
+    if(!isResults){form.append(list,status);input.setAttribute('role','combobox');input.setAttribute('aria-autocomplete','list');input.setAttribute('aria-controls',list.id);input.setAttribute('aria-expanded','false');}
+    let timer,revision=0,active=-1,options=[];
+    const close=()=>{revision++;list.hidden=true;input.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant');active=-1;};
+    closeSearchSuggestions.push(close);
+    function select(index){active=index;$$('[role="option"]',list).forEach((option,i)=>{option.setAttribute('aria-selected',String(i===active));if(i===active){input.setAttribute('aria-activedescendant',option.id);if(option.offsetTop<list.scrollTop)list.scrollTop=option.offsetTop;else if(option.offsetTop+option.offsetHeight>list.scrollTop+list.clientHeight)list.scrollTop=option.offsetTop+option.offsetHeight-list.clientHeight;}});}
+    async function suggest(){
+      const current=++revision,query=input.value.trim();
+      if(!SFSearch.words(query).length){close();return;}
+      status.textContent='Ищем…';
+      try{
+        const engine=await getSearchEngine();
+        if(current!==revision||document.activeElement!==input)return;
+        options=engine.find(query).slice(0,6);active=-1;input.removeAttribute('aria-activedescendant');list.replaceChildren();
+        options.forEach((entry,i)=>{
+          const option=document.createElement('a');option.href=entry.product.url;option.id=`${list.id}-${i}`;option.tabIndex=-1;option.setAttribute('role','option');option.setAttribute('aria-selected','false');
+          const article=document.createElement('strong');article.textContent=entry.product.article;highlight(article,query,true);
+          const name=document.createElement('span');name.textContent=entry.product.name;highlight(name,query);option.append(article,name);list.append(option);
+        });
+        if(!options.length){const empty=document.createElement('p');empty.textContent='Ничего не найдено. Попробуйте другой артикул.';list.append(empty);}
+        list.hidden=false;input.setAttribute('aria-expanded','true');status.textContent=`Подсказок: ${options.length}`;
+      }catch{if(current===revision){close();status.textContent='Каталог недоступен. Нажмите «Найти», чтобы повторить поиск.';}}
+    }
+    input.addEventListener('input',()=>{
+      clear.hidden=!input.value;clearTimeout(timer);close();
+      timer=setTimeout(()=>{if(isResults){history.replaceState(null,'',location.pathname+'?q='+encodeURIComponent(input.value.trim()));search();}else suggest();},180);
+    });
+    input.addEventListener('focus',()=>{if(!isResults&&input.value.trim())suggest();});
+    clear.addEventListener('click',()=>{input.value='';input.dispatchEvent(new Event('input'));input.focus();});
+    input.addEventListener('keydown',event=>{
+      if(event.key==='Escape'){event.preventDefault();clearTimeout(timer);close();}
+      if(!list.hidden&&options.length&&['ArrowDown','ArrowUp'].includes(event.key)){event.preventDefault();select(active<0?(event.key==='ArrowDown'?0:options.length-1):(active+(event.key==='ArrowDown'?1:-1)+options.length)%options.length);}
+      if(event.key==='Enter'&&!list.hidden&&active>=0){event.preventDefault();location.assign(options[active].product.url);}
+    });
+    form.addEventListener('focusout',()=>{requestAnimationFrame(()=>{if(!form.contains(document.activeElement))close();});});
+    form.addEventListener('submit',event=>{
+      event.preventDefault();close();clearTimeout(timer);
+      const query=input.value.trim();
+      if(isResults){history.replaceState(null,'',location.pathname+'?q='+encodeURIComponent(query));search();}
+      else location.assign('/search.html?q='+encodeURIComponent(query));
     });
   });
+  document.addEventListener('pointerdown',event=>{if(!event.target.closest('form.search'))closeSearchSuggestions.forEach(close=>close());});
+  $$('[data-toggle]').forEach(button=>button.addEventListener('click',()=>closeSearchSuggestions.forEach(close=>close())));
 
   function quantityValue(value) {
     return Math.min(MAX_QUANTITY, Math.max(1, Math.round(Number(value) || 1)));
@@ -595,38 +660,47 @@
       <button class="button" type="button" data-retry="${target}">Попробовать ещё раз</button></div>`;
   }
 
+  let searchRevision=0,searchMatches=[],searchShown=0,currentSearchQuery='';
+  function renderSearchPage(append=false) {
+    const results=$('#search-results');
+    if(!append){results.replaceChildren();searchShown=0;}
+    const next=searchMatches.slice(searchShown,searchShown+30);
+    const container=document.createElement('div');container.innerHTML=next.map(entry=>productCard(entry.product)).join('');
+    $$('.product-article',container).forEach(node=>highlight(node,currentSearchQuery,true));
+    $$('h3 a',container).forEach(node=>highlight(node,currentSearchQuery));
+    const first=container.firstElementChild;
+    results.append(...container.children);searchShown+=next.length;
+    $('#search-more').hidden=searchShown>=searchMatches.length;
+    if(append&&first){$('h3 a',first)?.focus({preventScroll:true});}
+    if(!searchMatches.length)results.innerHTML='<div class="empty-state"><h2>Ничего не найдено</h2><p>Попробуйте другой артикул, название или сбросьте фильтры.</p><a class="button" href="/catalog.html">Открыть каталог</a></div>';
+    $('#search-summary').textContent=`По запросу «${currentSearchQuery}» найдено товаров: ${searchMatches.length}. Показано: ${searchShown}`;
+  }
+  $('#search-more')?.addEventListener('click',()=>renderSearchPage(true));
   async function search() {
-    const results = $('#search-results');
-    if (!results) return;
-    const query = (new URLSearchParams(location.search).get('q') || '').trim();
-    $('#search-query').value = query;
-    const summary = $('#search-summary');
-    if (!query) {
-      summary.textContent = 'Найдите фурнитуру по названию, артикулу, бренду или отделке.';
-      return;
-    }
-    summary.textContent = 'Ищем в каталоге…';
-    results.setAttribute('aria-busy', 'true');
-    results.innerHTML = '<p class="loading-state" role="status">Загружаем товары…</p>';
-    try {
-      const products = await getProducts();
-      const normalize = value => value.toLocaleLowerCase('ru').replace(/ё/g, 'е').replace(/[\s\-–хx×]/g, '');
-      const words = query.split(/\s+/).filter(Boolean).map(normalize);
-      const matches = products.filter(product => words.every(word =>
-        normalize([product.name, product.article, product.finish, product.url].join(' ')).includes(word)
-      ));
-      const exactArticle = normalize(query);
-      matches.sort((a, b) => Number(normalize(b.article) === exactArticle) - Number(normalize(a.article) === exactArticle));
-      summary.textContent = `По запросу «${query}» найдено товаров: ${matches.length}`;
-      results.innerHTML = matches.length ? matches.map(productCard).join('') :
-        '<div class="empty-state"><h2>Ничего не найдено</h2><p>Попробуйте другой артикул или более короткое название.</p><a class="button" href="/catalog.html">Открыть каталог</a></div>';
-      animateUI(results, [{ opacity: .6 }, { opacity: 1 }], { duration: motionTime.quick });
-    } catch {
-      summary.textContent = 'Не удалось выполнить поиск.';
-      results.innerHTML = errorState('Проверьте подключение к интернету и повторите поиск.', 'search');
-    } finally {
-      results.setAttribute('aria-busy', 'false');
-    }
+    const results=$('#search-results');if(!results)return;
+    const revision=++searchRevision,query=(new URLSearchParams(location.search).get('q')||'').trim().slice(0,200);
+    $('#search-query').value=query;
+    const clear=$('.large-search .search-clear');if(clear)clear.hidden=!query;
+    const summary=$('#search-summary'),filters=$('#search-filters');filters.hidden=true;filters.replaceChildren();$('#search-more').hidden=true;
+    if(!SFSearch.words(query).length){summary.textContent='Найдите фурнитуру по названию, артикулу, бренду или отделке.';results.replaceChildren();results.setAttribute('aria-busy','false');return;}
+    summary.textContent='Ищем в каталоге…';results.setAttribute('aria-busy','true');results.innerHTML='<p class="loading-state" role="status">Загружаем товары…</p>';
+    try{
+      const engine=await getSearchEngine();if(revision!==searchRevision)return;
+      const matches=engine.find(query);currentSearchQuery=query;searchMatches=matches;
+      for(const [key,label] of [['brand','Бренд'],['category','Категория']]){
+        const values=[...new Set(matches.map(entry=>entry[key]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru'));
+        if(values.length<2)continue;
+        const wrapper=document.createElement('label');wrapper.append(document.createTextNode(label+' '));const select=document.createElement('select');select.dataset.searchFilter=key;
+        const all=document.createElement('option');all.value='';all.textContent='Все';select.append(all);
+        values.forEach(value=>{const option=document.createElement('option');option.value=value;option.textContent=value;select.append(option);});wrapper.append(select);filters.append(wrapper);
+      }
+      filters.hidden=!filters.children.length;
+      filters.onchange=()=>{const selected=Object.fromEntries($$('select',filters).map(select=>[select.dataset.searchFilter,select.value]));searchMatches=engine.find(query,selected);renderSearchPage();};
+      renderSearchPage();
+    }catch{
+      if(revision!==searchRevision)return;
+      summary.textContent='Не удалось выполнить поиск.';results.innerHTML=errorState('Проверьте подключение к интернету и повторите поиск.','search');
+    }finally{if(revision===searchRevision)results.setAttribute('aria-busy','false');}
   }
 
   // Integer kopecks avoid rounding drift; unknown prices never become zero.
