@@ -195,6 +195,7 @@
   }
 
   function saveCart(cart) {
+    if(inquirySending)return false;
     try {
       localStorage.setItem(CART_KEY, JSON.stringify(cart));
     } catch {
@@ -220,6 +221,7 @@
   function toast(message, withCartLink = false) {
     const element = $('.toast');
     if (!element) return;
+    element.classList.toggle('inquiry-toast',!!$('#cart-content')||withCartLink);
     const wasVisible = !element.hidden;
     const currentStyle = getComputedStyle(element);
     const fromOpacity = wasVisible ? Number(currentStyle.opacity) : 0;
@@ -771,6 +773,7 @@
   async function renderCart() {
     const root = $('#cart-content');
     if (!root) return;
+    if(inquirySending){inquiryCartDirty=true;return;}
     const request = ++cartRender;
     const cart = getCart();
     const form = $('#inquiry-form');
@@ -812,6 +815,7 @@
   }
 
   function inquiryText() {
+    if(inquirySending&&inquirySnapshot)return inquirySnapshot.message;
     const fields = new FormData($('#inquiry'));
     const type=fields.get('clientType'),recipient=INQUIRY_CONFIG.recipients[type];
     return ['Здравствуйте! Прошу уточнить стоимость и наличие фурнитуры.', '',
@@ -824,16 +828,31 @@
       ...(fields.get('comment')?.trim() ? [`Комментарий: ${fields.get('comment').trim()}`] : [])].join('\n');
   }
 
-  let inquirySending=false,inquiryAccepted=false;
+  let inquirySending=false,inquiryAccepted=false,inquirySnapshot=null,inquiryCartDirty=false;
+  const inquiryDisabled=new Map();
+  function lockInquiry(locked) {
+    if(locked){
+      $$('#inquiry input, #inquiry textarea, #cart-content input, #cart-content button').forEach(control=>{inquiryDisabled.set(control,control.disabled);control.disabled=true;});
+      $('#cart-content').setAttribute('aria-busy','true');
+    }else{
+      inquiryDisabled.forEach((disabled,control)=>{control.disabled=disabled;});inquiryDisabled.clear();
+      $('#cart-content').removeAttribute('aria-busy');
+    }
+  }
+  const testNotice=$('#inquiry-test-notice');if(testNotice)testNotice.hidden=!INQUIRY_CONFIG.testMode;
   function inquiryStatus(message,state) {
     const status=$('#inquiry-status');status.hidden=false;status.dataset.state=state;
+    $('#inquiry-status-title').textContent=state==='success'?'Принято сервисом':state==='sending'?'Отправляем заявку':'Не удалось подтвердить отправку';
+    animateUI(status,[{opacity:.5,transform:'translateY(4px)'},{opacity:1,transform:'translateY(0)'}],{duration:220});
     $('#inquiry-status-icon').textContent=state==='success'?'✓':state==='sending'?'…':'!';
     $('#inquiry-status-text').textContent=message;
   }
-  $('#inquiry [name="clientType"]')?.addEventListener('change',event=>{
+  $$('#inquiry [name="clientType"]').forEach(control=>control.addEventListener('change',event=>{
+    if(!event.target.checked)return;
     const recipient=INQUIRY_CONFIG.recipients[event.target.value];
     $('#inquiry-manager').textContent=recipient?`Ваш специалист: ${recipient.manager}`:'Выберите тип клиента';
-  });
+    animateUI($('#inquiry-manager'),[{opacity:.5},{opacity:1}],{duration:200});
+  }));
   $('#inquiry-new')?.addEventListener('click',()=>{
     inquiryAccepted=false;$('#send-inquiry').disabled=false;$('#inquiry-new').hidden=true;
     $('#inquiry-status').hidden=true;$('#send-inquiry').focus();
@@ -858,18 +877,19 @@
       _subject:`${INQUIRY_CONFIG.testMode?'[ТЕСТ] ':''}СтеклоФурнитура — заявка ${type==='business'?'юридического лица / опт':'физического лица'}`,
       _template:'table',_url:location.href,_honey:fields.get('_honey')||''
     };
+    inquirySnapshot=Object.freeze({json:JSON.stringify(payload),message:payload.message});
     const button=$('#send-inquiry'),label=button.innerHTML,controller=new AbortController();
     const timer=setTimeout(()=>controller.abort(),15000);
-    inquirySending=true;button.disabled=true;button.textContent='Отправляем…';form.setAttribute('aria-busy','true');button.setAttribute('aria-busy','true');
+    inquirySending=true;lockInquiry(true);button.disabled=true;button.textContent='Отправляем…';form.setAttribute('aria-busy','true');button.setAttribute('aria-busy','true');
     inquiryStatus('Отправляем заявку…','sending');
     try{
       const response=await fetch(`https://formsubmit.co/ajax/${address}`,{
-        method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(payload),signal:controller.signal
+        method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:inquirySnapshot.json,signal:controller.signal
       });
       const data=await response.json();
       if(response.ok && String(data?.success) === 'true'){
         inquiryAccepted=true;
-        inquiryStatus('Заявка принята к отправке. Менеджер сможет связаться с вами по указанным контактам','success');
+        inquiryStatus(INQUIRY_CONFIG.testMode?'Тестовая заявка принята сервисом. Она направлена на тестовую почту, а не менеджерам компании':'Заявка принята к отправке. Менеджер сможет связаться с вами по указанным контактам','success');
         $('#inquiry-new').hidden=false;
       }else if(/activat/i.test(String(data?.message||''))){
         inquiryStatus('Приём заявок ещё не активирован. Заявка не подтверждена; воспользуйтесь копированием списка или PDF.','error');
@@ -881,8 +901,9 @@
         ?'Время ожидания истекло. Результат отправки неизвестен. Перед повторной отправкой учтите, что сервис мог принять первую заявку. Данные сохранены.'
         :'Не удалось подтвердить отправку. Проверьте соединение. Данные сохранены, копирование и PDF доступны.','error');
     }finally{
-      clearTimeout(timer);inquirySending=false;button.disabled=inquiryAccepted;button.innerHTML=label;
+      clearTimeout(timer);lockInquiry(false);inquirySending=false;inquirySnapshot=null;button.disabled=inquiryAccepted;button.innerHTML=label;
       form.removeAttribute('aria-busy');button.removeAttribute('aria-busy');
+      if(inquiryCartDirty){inquiryCartDirty=false;updateCount();renderCart();}
     }
   });
 
@@ -993,6 +1014,7 @@
 
   window.addEventListener('storage', event => {
     if (event.key === CART_KEY || event.key === null) {
+      if(inquirySending){inquiryCartDirty=true;return;}
       updateCount();
       renderCart();
     }
