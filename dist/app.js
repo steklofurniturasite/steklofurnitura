@@ -823,7 +823,8 @@
       ...getCart().map((item, index) => {
         const product = productMap.get(item.url);
         return product ? `${index + 1}. ${product.name}\nАрт.: ${product.article}\nОтделка: ${product.finish}\nКоличество: ${item.qty} ${product.unit || 'шт.'}\nЦена: ${priceMinor(product) === null ? 'Цену уточняйте' : `${formatPrice(priceMinor(product))} (с НДС)`}\nСумма: ${priceMinor(product) === null ? 'Цену уточняйте' : formatPrice(priceMinor(product) * BigInt(item.qty))}\nСсылка: ${publicProductURL(product)}` : '';
-      }), '', inquiryTotal(), '', `Имя: ${fields.get('name')}`, `Телефон: ${fields.get('phone')}`,
+      }), '', inquiryTotal(), '', `Имя: ${fields.get('name')?.trim() || ''}`,
+      ...(fields.get('phone')?.trim() ? [`Телефон: ${fields.get('phone').trim()}`] : []),
       ...(fields.get('email')?.trim() ? [`Email: ${fields.get('email').trim()}`] : []),
       ...(fields.get('comment')?.trim() ? [`Комментарий: ${fields.get('comment').trim()}`] : [])].join('\n');
   }
@@ -857,22 +858,33 @@
     inquiryAccepted=false;$('#send-inquiry').disabled=false;$('#inquiry-new').hidden=true;
     $('#inquiry-status').hidden=true;$('#send-inquiry').focus();
   });
+  $$('#inquiry [name="phone"], #inquiry [name="email"]').forEach(input=>input.addEventListener('input',()=>{
+    $('#inquiry-contact-error').hidden=true;
+    $$('#inquiry [name="phone"], #inquiry [name="email"]').forEach(field=>{field.removeAttribute('aria-invalid');field.setAttribute('aria-describedby','inquiry-contact-hint');});
+  }));
   $('#inquiry')?.addEventListener('submit', async event => {
     event.preventDefault();
     if(inquirySending||inquiryAccepted)return;
-    const form=event.currentTarget,fields=new FormData(form),type=fields.get('clientType');
+    const form=event.currentTarget,fields=new FormData(form),type=String(fields.get('clientType')||'').trim(),
+      name=String(fields.get('name')||'').trim(),phone=String(fields.get('phone')||'').trim(),email=String(fields.get('email')||'').trim();
     if(!form.reportValidity())return;
     const recipient=Object.hasOwn(INQUIRY_CONFIG.recipients,type)?INQUIRY_CONFIG.recipients[type]:null;
-    if(!recipient||!String(fields.get('name')).trim()||!String(fields.get('phone')).trim()){
-      inquiryStatus('Выберите тип клиента и укажите имя и телефон.','error');return;
+    if(!recipient||!name){
+      inquiryStatus('Выберите тип клиента и укажите имя.','error');return;
+    }
+    if(!Boolean(phone||email)){
+      const error=$('#inquiry-contact-error');error.hidden=false;
+      $$('#inquiry [name="phone"], #inquiry [name="email"]').forEach(field=>{field.setAttribute('aria-invalid','true');field.setAttribute('aria-describedby','inquiry-contact-hint inquiry-contact-error');});
+      $('#inquiry [name="phone"]').focus();
+      animateUI(error,[{opacity:.4,transform:'translateY(2px)'},{opacity:1,transform:'translateY(0)'}],{duration:180});
+      return;
     }
     if(!getCart().length||getCart().some(item=>!productMap.has(item.url))){
       inquiryStatus('Не удалось подтвердить состав заявки. Обновите страницу перед отправкой.','error');return;
     }
     const address=INQUIRY_CONFIG.testMode?INQUIRY_CONFIG.testEmail:recipient.email;
     const payload={
-      name:fields.get('name').trim(),phone:fields.get('phone').trim(),
-      ...(fields.get('email')?.trim()?{email:fields.get('email').trim()}:{}),
+      name,...(phone?{phone}:{}),...(email?{email}:{}),
       client_type:inquiryClientLabel(type),manager:recipient.manager,message:inquiryText(),
       _subject:`${INQUIRY_CONFIG.testMode?'[ТЕСТ] ':''}СтеклоФурнитура — заявка ${type==='business'?'юридического лица / опт':'физического лица'}`,
       _template:'table',_url:location.href,_honey:fields.get('_honey')||''
