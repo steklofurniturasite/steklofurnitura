@@ -86,7 +86,7 @@ def footer():
 def shell(title,body,active='',desc=''):
     map_assets = (''
                   f'<script src="/map.js?v={static_version("map.js")}" defer></script>') if 'id="office-map"' in body else ''
-    return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="{esc(desc or 'ООО «Стеклофурнитура». Фурнитура для стекла DORMA, ТИТАН, HAG, StifGlass. Каталог, проекты и контакты в Минске.')} "><meta name="theme-color" content="#c54908"><title>{esc(title)} — Стеклофурнитура</title>{map_assets}<link rel="stylesheet" href="/style.css?v={static_version('style.css')}"><script src="/app.js?v={static_version('app.js')}" defer></script></head><body>{header(active)}<main id="main">{body}</main>{footer()}</body></html>'''
+    return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="{esc(desc or 'ООО «Стеклофурнитура». Фурнитура для стекла DORMA, ТИТАН, HAG, StifGlass. Каталог, проекты и контакты в Минске.')} "><meta name="theme-color" content="#c54908"><title>{esc(title)} — Стеклофурнитура</title>{map_assets}<link rel="stylesheet" href="/style.css?v={static_version('style.css')}"><script src="/search.js?v={static_version('search.js')}" defer></script><script src="/app.js?v={static_version('app.js')}" defer></script></head><body>{header(active)}<main id="main">{body}</main>{footer()}</body></html>'''
 
 def clean(el):
     el=copy.deepcopy(el)
@@ -293,7 +293,7 @@ def write_page(path,title,body,desc=''):
     dest.write_text(shell(title,body,path,desc),encoding='utf8')
 
 if __name__=='__main__':
-    for name in ['style.css','app.js','map.js']:
+    for name in ['style.css','app.js','map.js','search.js']:
         shutil.copyfile(STATIC/name,DIST/name)
     shutil.copytree(STATIC/'vendor',DIST/'vendor',dirs_exist_ok=True)
     records=read_records();pages=[]
@@ -321,7 +321,7 @@ if __name__=='__main__':
     write_page('/catalog.html','Каталог продукции',all_catalog())
     for page in pages:
         url=page['url']
-        if url in ['/contacts.html','/gallery.html','/system/cart.html','/search.html']:continue
+        if url in ['/contacts.html','/gallery.html','/system/cart.html','/search.html','/system/search.html']:continue
         if page['product']:body=product_page(page,page['product'])
         elif url.startswith('/catalog/') and (xp(page['tree'],'cat-item') or xp(page['tree'],'series-items')):body=catalog_page(page)
         else:body=generic_page(page)
@@ -329,7 +329,11 @@ if __name__=='__main__':
     write_page('/contacts.html','Контакты',contacts_page())
     write_page('/gallery.html','Галерея проектов',gallery_page())
     write_page('/system/cart.html','Ваш заказ',cart_page())
-    write_page('/search.html','Поиск по каталогу',f'<div class="wrap">{breadcrumb([("Поиск","/search.html")])}{page_title("Поиск по каталогу")}<form action="/search.html" class="large-search"><input name="q" id="search-query" aria-label="Название или артикул" placeholder="Введите название или артикул"><button class="button">Найти {icon("search")}</button></form><p id="search-summary" aria-live="polite"></p><div id="search-results" class="product-grid section"></div></div>')
+    write_page('/search.html','Поиск по каталогу',f'<div class="wrap">{breadcrumb([("Поиск","/search.html")])}{page_title("Поиск по каталогу")}<form action="/search.html" class="large-search" role="search"><input type="search" name="q" id="search-query" aria-label="Название или артикул" placeholder="Введите название или артикул"><button class="button">Найти {icon("search")}</button></form><p id="search-summary" aria-live="polite"></p><div id="search-filters" class="search-filters" hidden></div><div id="search-results" class="product-grid section"></div><button type="button" class="button" id="search-more" hidden>Показать ещё</button></div>')
+    shutil.copyfile(DIST/'search.html',DIST/'system/search.html')
+    page_context={p['url']:' '.join(n for n,u in p['crumbs'][:-1]) for p in pages if p['product']}
+    search_categories={p['url']:{'category':next((c['name'] for c in categories if p['url'].startswith(c['url'])), ''), 'context':page_context.get(p['url'],'')} for p in products.values()}
+    (DIST/'search-categories.json').write_text(json.dumps(search_categories,ensure_ascii=False,separators=(',',':')))
     index=[]
     for p in products.values():
         index.append({k:v for k,v in p.items() if k not in ['description','images'] }|{'image':asset(p['image']), 'route':p['url']})
