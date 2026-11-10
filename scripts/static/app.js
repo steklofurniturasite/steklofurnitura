@@ -278,19 +278,36 @@
     ]).then(([products,categories])=>SFSearch.create(products,categories)).catch(error=>{searchEnginePromise=undefined;throw error;});
     return searchEnginePromise;
   }
+  // Presentation-only ranges, using the engine's existing normalizers unchanged.
   function highlight(element,query,isArticle=false) {
-    const value=element.textContent;
-    element.replaceChildren();
-    if(isArticle && SFSearch.article(query) && SFSearch.article(value).startsWith(SFSearch.article(query))) {
-      const mark=document.createElement('mark');mark.textContent=value;element.append(mark);return;
+    const value=element.textContent,ranges=[];
+    if(isArticle) {
+      const compact=SFSearch.article(query),haystack=SFSearch.article(value);
+      const needles=compact&&haystack.includes(compact)?[compact]:[...new Set(SFSearch.words(query).map(SFSearch.article).filter(Boolean))];
+      const positions=[];
+      for(let i=0;i<value.length;i++) {
+        const length=SFSearch.article(value.slice(0,i+1)).length;
+        while(positions.length<length)positions.push(i);
+      }
+      for(const needle of needles)for(let at=haystack.indexOf(needle);at>=0;at=haystack.indexOf(needle,at+needle.length)) {
+        if(positions[at]!==undefined&&positions[at+needle.length-1]!==undefined)ranges.push([positions[at],positions[at+needle.length-1]+1]);
+      }
     }
-    const terms=SFSearch.words(query);
-    for(const part of value.split(/([\p{L}\p{N}]+)/u)) {
-      const matched=terms.some(t=>SFSearch.term(part).startsWith(t));
-      const node=matched?document.createElement('mark'):document.createTextNode(part);
-      if(matched) node.textContent=part;
-      element.append(node);
+    if(!ranges.length) {
+      const terms=SFSearch.words(query);
+      for(const match of value.matchAll(/[\p{L}\p{N}]+/gu)) {
+        const word=match[0],literal=terms.filter(t=>SFSearch.text(word).startsWith(t));
+        if(literal.length)ranges.push([match.index,match.index+Math.max(...literal.map(t=>t.length))]);
+        else if(terms.some(t=>SFSearch.term(word).startsWith(t)))ranges.push([match.index,match.index+word.length]);
+      }
     }
+    const merged=[];ranges.sort((a,b)=>a[0]-b[0]).forEach(range=>{const previous=merged[merged.length-1];if(previous&&range[0]<=previous[1])previous[1]=Math.max(previous[1],range[1]);else merged.push([...range]);});
+    element.replaceChildren();let offset=0;
+    for(const [start,end] of merged){element.append(document.createTextNode(value.slice(offset,start)));const mark=document.createElement('mark');mark.textContent=value.slice(start,end);element.append(mark);offset=end;}
+    element.append(document.createTextNode(value.slice(offset)));
+  }
+  function revealSearch(element,large=false) {
+    return animateUI(element,[{opacity:.45,transform:`translateY(${large?7:4}px)`},{opacity:1,transform:'translateY(0)'}],{duration:large?260:200});
   }
   const closeSearchSuggestions=[];
   $$('form.search, form.large-search').forEach((form,index) => {
@@ -302,13 +319,20 @@
     const status=document.createElement('span');status.className='search-sr-status';status.setAttribute('role','status');
     if(!isResults){form.append(list,status);input.setAttribute('role','combobox');input.setAttribute('aria-autocomplete','list');input.setAttribute('aria-controls',list.id);input.setAttribute('aria-expanded','false');}
     let timer,revision=0,active=-1,options=[];
-    const close=()=>{revision++;list.hidden=true;input.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant');active=-1;};
+    const close=()=>{if(!isResults)clearTimeout(timer);revision++;if(!list.hidden){animateExit(list);exitLayers.get(list)?.classList.replace('search-suggestions','search-suggestions-exit');}motionByElement.get(list)?.cancel();list.hidden=true;input.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant');active=-1;};
     closeSearchSuggestions.push(close);
     function select(index){active=index;$$('[role="option"]',list).forEach((option,i)=>{option.setAttribute('aria-selected',String(i===active));if(i===active){input.setAttribute('aria-activedescendant',option.id);if(option.offsetTop<list.scrollTop)list.scrollTop=option.offsetTop;else if(option.offsetTop+option.offsetHeight>list.scrollTop+list.clientHeight)list.scrollTop=option.offsetTop+option.offsetHeight-list.clientHeight;}});}
+    function showSuggestions() {
+      const opening=list.hidden,layer=exitLayers.get(list),opacity=layer?Number(getComputedStyle(layer).opacity):0;
+      clearExit(list);list.hidden=false;input.setAttribute('aria-expanded','true');
+      if(opening)animateUI(list,[{opacity,transform:'translateY(-5px)'},{opacity:1,transform:'translateY(0)'}],{duration:220});
+    }
     async function suggest(){
+      if(document.activeElement!==input)return;
       const current=++revision,query=input.value.trim();
       if(!SFSearch.words(query).length){close();return;}
-      status.textContent='Ищем…';
+      status.textContent='Ищем…';list.setAttribute('aria-busy','true');
+      if(list.hidden){list.innerHTML='<p class="search-loading">Ищем подходящие товары…</p>';showSuggestions();}
       try{
         const engine=await getSearchEngine();
         if(current!==revision||document.activeElement!==input)return;
@@ -319,11 +343,16 @@
           const name=document.createElement('span');name.textContent=entry.product.name;highlight(name,query);option.append(article,name);list.append(option);
         });
         if(!options.length){const empty=document.createElement('p');empty.textContent='Ничего не найдено. Попробуйте другой артикул.';list.append(empty);}
-        list.hidden=false;input.setAttribute('aria-expanded','true');status.textContent=`Подсказок: ${options.length}`;
+        list.setAttribute('aria-busy','false');showSuggestions();status.textContent=`Подсказок: ${options.length}`;
       }catch{if(current===revision){close();status.textContent='Каталог недоступен. Нажмите «Найти», чтобы повторить поиск.';}}
     }
     input.addEventListener('input',()=>{
-      clear.hidden=!input.value;clearTimeout(timer);close();
+      const hide=!input.value,wasHidden=clear.hidden;
+      clearExit(clear);
+      if(hide&&!clear.hidden){animateExit(clear);exitLayers.get(clear)?.classList.replace('search-clear','search-clear-exit');}
+      clear.hidden=hide;if(!hide&&wasHidden)animateUI(clear,[{opacity:.4,transform:'scale(.9)'},{opacity:1,transform:'scale(1)'}],{duration:180});
+      clearTimeout(timer);revision++;active=-1;options=[];input.removeAttribute('aria-activedescendant');if(!list.hidden){list.setAttribute('aria-busy','true');$$('[role="option"]',list).forEach(option=>{option.removeAttribute('role');option.inert=true;});}
+      if(!SFSearch.words(input.value).length)close();
       timer=setTimeout(()=>{if(isResults){history.replaceState(null,'',location.pathname+'?q='+encodeURIComponent(input.value.trim()));search();}else suggest();},180);
     });
     input.addEventListener('focus',()=>{getSearchEngine().catch(()=>{});if(!isResults&&input.value.trim())suggest();});
@@ -331,7 +360,7 @@
     input.addEventListener('keydown',event=>{
       if(event.key==='Escape'){event.preventDefault();clearTimeout(timer);close();}
       if(!list.hidden&&options.length&&['ArrowDown','ArrowUp'].includes(event.key)){event.preventDefault();select(active<0?(event.key==='ArrowDown'?0:options.length-1):(active+(event.key==='ArrowDown'?1:-1)+options.length)%options.length);}
-      if(event.key==='Enter'&&!list.hidden&&active>=0){event.preventDefault();location.assign(options[active].product.url);}
+      if(event.key==='Enter'&&!list.hidden&&active>=0){event.preventDefault();const url=options[active].product.url;close();location.assign(url);}
     });
     form.addEventListener('focusout',()=>{requestAnimationFrame(()=>{if(!form.contains(document.activeElement))close();});});
     form.addEventListener('submit',event=>{
@@ -669,10 +698,13 @@
     $$('.product-article',container).forEach(node=>highlight(node,currentSearchQuery,true));
     $$('h3 a',container).forEach(node=>highlight(node,currentSearchQuery));
     const first=container.firstElementChild;
-    results.append(...container.children);searchShown+=next.length;
+    const inserted=[...container.children];results.append(...inserted);searchShown+=next.length;
+    inserted.filter(card=>card.getBoundingClientRect().top<innerHeight+80).slice(0,8).forEach(card=>revealSearch(card,true));
     $('#search-more').hidden=searchShown>=searchMatches.length;
     if(append&&first){$('h3 a',first)?.focus({preventScroll:true});}
     if(!searchMatches.length)results.innerHTML='<div class="empty-state"><h2>Ничего не найдено</h2><p>Попробуйте другой артикул, название или сбросьте фильтры.</p><a class="button" href="/catalog.html">Открыть каталог</a></div>';
+    revealSearch(results.querySelector('.empty-state'));
+    revealSearch($('#search-summary'));
     $('#search-summary').textContent=`По запросу «${currentSearchQuery}» найдено товаров: ${searchMatches.length}. Показано: ${searchShown}`;
   }
   $('#search-more')?.addEventListener('click',()=>renderSearchPage(true));
@@ -681,12 +713,12 @@
     const revision=++searchRevision,query=(new URLSearchParams(location.search).get('q')||'').trim().slice(0,200);
     $('#search-query').value=query;
     const clear=$('.large-search .search-clear');if(clear)clear.hidden=!query;
-    const summary=$('#search-summary'),filters=$('#search-filters');filters.hidden=true;filters.replaceChildren();$('#search-more').hidden=true;
-    if(!SFSearch.words(query).length){summary.textContent='Найдите фурнитуру по названию, артикулу, бренду или отделке.';results.replaceChildren();results.setAttribute('aria-busy','false');return;}
-    summary.textContent='Ищем в каталоге…';results.setAttribute('aria-busy','true');results.innerHTML='<p class="loading-state" role="status">Загружаем товары…</p>';
+    const summary=$('#search-summary'),filters=$('#search-filters');$('#search-more').hidden=true;
+    if(!SFSearch.words(query).length){filters.hidden=true;filters.replaceChildren();summary.textContent='Найдите фурнитуру по названию, артикулу, бренду или отделке.';results.replaceChildren();results.inert=false;results.setAttribute('aria-busy','false');return;}
+    summary.textContent='Ищем в каталоге…';results.setAttribute('aria-busy','true');results.inert=true;if(!results.children.length)results.innerHTML='<p class="loading-state search-loading" role="status">Загружаем товары…</p>';
     try{
       const engine=await getSearchEngine();if(revision!==searchRevision)return;
-      const matches=engine.find(query);currentSearchQuery=query;searchMatches=matches;
+      const matches=engine.find(query);currentSearchQuery=query;searchMatches=matches;filters.replaceChildren();
       for(const [key,label] of [['brand','Бренд'],['category','Категория']]){
         const values=[...new Set(matches.map(entry=>entry[key]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru'));
         if(values.length<2)continue;
@@ -695,12 +727,12 @@
         values.forEach(value=>{const option=document.createElement('option');option.value=value;option.textContent=key==='brand'?SFSearch.brandLabels[value]:value;select.append(option);});wrapper.append(select);filters.append(wrapper);
       }
       filters.hidden=!filters.children.length;
-      filters.onchange=()=>{const selected=Object.fromEntries($$('select',filters).map(select=>[select.dataset.searchFilter,select.value]));searchMatches=engine.find(query,selected);renderSearchPage();};
+      filters.onchange=()=>{$$('select',filters).forEach(select=>select.closest('label').classList.toggle('is-applied',!!select.value));const selected=Object.fromEntries($$('select',filters).map(select=>[select.dataset.searchFilter,select.value]));searchMatches=engine.find(query,selected);renderSearchPage();};
       renderSearchPage();
     }catch{
       if(revision!==searchRevision)return;
       summary.textContent='Не удалось выполнить поиск.';results.innerHTML=errorState('Проверьте подключение к интернету и повторите поиск.','search');
-    }finally{if(revision===searchRevision)results.setAttribute('aria-busy','false');}
+    }finally{if(revision===searchRevision){results.inert=false;results.setAttribute('aria-busy','false');}}
   }
 
   // Integer kopecks avoid rounding drift; unknown prices never become zero.
