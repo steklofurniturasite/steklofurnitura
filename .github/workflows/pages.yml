@@ -52,6 +52,7 @@ jobs:
           node scripts/map_checks.cjs
           node scripts/layout_checks.cjs
           node scripts/pdf_checks.cjs
+          node scripts/inquiry_checks.cjs
           node scripts/motion_checks.cjs
           node scripts/price_checks.cjs
           node scripts/premium_checks.cjs

@@ -9,6 +9,15 @@
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[character]));
   const CART_KEY = 'steklofurnitura-inquiry';
+  const INQUIRY_CONFIG = {
+    testMode: true,
+    testEmail: 'steklofurniturasite@gmail.com',
+    recipients: {
+      individual: { email: 'steklofurnitura@gmail.com', manager: 'Виктория' },
+      business: { email: 'steklofurnitura@mail.ru', manager: 'Назар' }
+    }
+  };
+  const inquiryClientLabel = type => type === 'business' ? 'Юридическое лицо / опт' : 'Физическое лицо';
   const MAX_QUANTITY = 99999;
   const MENU_IDS = ['catalog-menu', 'mobile-nav'];
   const productMap = new Map();
@@ -804,24 +813,77 @@
 
   function inquiryText() {
     const fields = new FormData($('#inquiry'));
+    const type=fields.get('clientType'),recipient=INQUIRY_CONFIG.recipients[type];
     return ['Здравствуйте! Прошу уточнить стоимость и наличие фурнитуры.', '',
+      `Тип клиента: ${inquiryClientLabel(type)}`, `Специалист: ${recipient?.manager || ''}`, '',
       ...getCart().map((item, index) => {
         const product = productMap.get(item.url);
         return product ? `${index + 1}. ${product.name}\nАрт.: ${product.article}\nОтделка: ${product.finish}\nКоличество: ${item.qty} ${product.unit || 'шт.'}\nЦена: ${priceMinor(product) === null ? 'Цену уточняйте' : `${formatPrice(priceMinor(product))} (с НДС)`}\nСумма: ${priceMinor(product) === null ? 'Цену уточняйте' : formatPrice(priceMinor(product) * BigInt(item.qty))}\nСсылка: ${publicProductURL(product)}` : '';
       }), '', inquiryTotal(), '', `Имя: ${fields.get('name')}`, `Телефон: ${fields.get('phone')}`,
-      `Комментарий: ${fields.get('comment') || ''}`].join('\n');
+      ...(fields.get('email')?.trim() ? [`Email: ${fields.get('email').trim()}`] : []),
+      ...(fields.get('comment')?.trim() ? [`Комментарий: ${fields.get('comment').trim()}`] : [])].join('\n');
   }
 
-  $('#inquiry')?.addEventListener('submit', event => {
+  let inquirySending=false,inquiryAccepted=false;
+  function inquiryStatus(message,state) {
+    const status=$('#inquiry-status');status.hidden=false;status.dataset.state=state;
+    $('#inquiry-status-icon').textContent=state==='success'?'✓':state==='sending'?'…':'!';
+    $('#inquiry-status-text').textContent=message;
+  }
+  $('#inquiry [name="clientType"]')?.addEventListener('change',event=>{
+    const recipient=INQUIRY_CONFIG.recipients[event.target.value];
+    $('#inquiry-manager').textContent=recipient?`Ваш специалист: ${recipient.manager}`:'Выберите тип клиента';
+  });
+  $('#inquiry-new')?.addEventListener('click',()=>{
+    inquiryAccepted=false;$('#send-inquiry').disabled=false;$('#inquiry-new').hidden=true;
+    $('#inquiry-status').hidden=true;$('#send-inquiry').focus();
+  });
+  $('#inquiry')?.addEventListener('submit', async event => {
     event.preventDefault();
-    const fields = new FormData(event.currentTarget);
-    const url = `mailto:${encodeURIComponent(fields.get('manager'))}?subject=${encodeURIComponent('Заявка на подбор фурнитуры')}&body=${encodeURIComponent(inquiryText())}`;
-    if (url.length > 7500) {
-      toast('Заявка слишком большая для почтовой ссылки. Скопируйте список и отправьте его менеджеру.');
-      return;
+    if(inquirySending||inquiryAccepted)return;
+    const form=event.currentTarget,fields=new FormData(form),type=fields.get('clientType');
+    if(!form.reportValidity())return;
+    const recipient=Object.hasOwn(INQUIRY_CONFIG.recipients,type)?INQUIRY_CONFIG.recipients[type]:null;
+    if(!recipient||!String(fields.get('name')).trim()||!String(fields.get('phone')).trim()){
+      inquiryStatus('Выберите тип клиента и укажите имя и телефон.','error');return;
     }
-    location.href = url;
-    toast('Заявка подготовлена. Отправьте письмо в почтовой программе.');
+    if(!getCart().length||getCart().some(item=>!productMap.has(item.url))){
+      inquiryStatus('Не удалось подтвердить состав заявки. Обновите страницу перед отправкой.','error');return;
+    }
+    const address=INQUIRY_CONFIG.testMode?INQUIRY_CONFIG.testEmail:recipient.email;
+    const payload={
+      name:fields.get('name').trim(),phone:fields.get('phone').trim(),
+      ...(fields.get('email')?.trim()?{email:fields.get('email').trim()}:{}),
+      client_type:inquiryClientLabel(type),manager:recipient.manager,message:inquiryText(),
+      _subject:`${INQUIRY_CONFIG.testMode?'[ТЕСТ] ':''}СтеклоФурнитура — заявка ${type==='business'?'юридического лица / опт':'физического лица'}`,
+      _template:'table',_url:location.href,_honey:fields.get('_honey')||''
+    };
+    const button=$('#send-inquiry'),label=button.innerHTML,controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),15000);
+    inquirySending=true;button.disabled=true;button.textContent='Отправляем…';form.setAttribute('aria-busy','true');button.setAttribute('aria-busy','true');
+    inquiryStatus('Отправляем заявку…','sending');
+    try{
+      const response=await fetch(`https://formsubmit.co/ajax/${address}`,{
+        method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(payload),signal:controller.signal
+      });
+      const data=await response.json();
+      if(response.ok && String(data?.success) === 'true'){
+        inquiryAccepted=true;
+        inquiryStatus('Заявка принята к отправке. Менеджер сможет связаться с вами по указанным контактам','success');
+        $('#inquiry-new').hidden=false;
+      }else if(/activat/i.test(String(data?.message||''))){
+        inquiryStatus('Приём заявок ещё не активирован. Заявка не подтверждена; воспользуйтесь копированием списка или PDF.','error');
+      }else{
+        inquiryStatus('Не удалось подтвердить приём заявки. Данные сохранены. Можно повторить попытку или сохранить список в PDF.','error');
+      }
+    }catch(error){
+      inquiryStatus(error.name==='AbortError'
+        ?'Время ожидания истекло. Результат отправки неизвестен. Перед повторной отправкой учтите, что сервис мог принять первую заявку. Данные сохранены.'
+        :'Не удалось подтвердить отправку. Проверьте соединение. Данные сохранены, копирование и PDF доступны.','error');
+    }finally{
+      clearTimeout(timer);inquirySending=false;button.disabled=inquiryAccepted;button.innerHTML=label;
+      form.removeAttribute('aria-busy');button.removeAttribute('aria-busy');
+    }
   });
 
   $('#copy-inquiry')?.addEventListener('click', async event => {
