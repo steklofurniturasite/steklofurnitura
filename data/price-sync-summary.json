@@ -1,16 +1,16 @@
 {
   "found": 1463,
   "checked": 1463,
-  "matching": 1345,
-  "updated": 118,
+  "matching": 1463,
+  "updated": 0,
   "without_public_price": 1463,
   "explicit_request": 1356,
   "hidden_unavailable": 107,
   "unverified": 0,
   "errors": 0,
   "retries": 0,
-  "requests": 1467,
-  "started_at": "2026-11-09T15:56:48+00:00",
-  "completed_at": "2026-11-09T16:22:42+00:00",
+  "requests": 1464,
+  "started_at": "2026-11-10T02:57:36+00:00",
+  "completed_at": "2026-11-10T03:22:04+00:00",
   "applied": true
 }
