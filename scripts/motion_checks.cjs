@@ -61,6 +61,7 @@ const fs=require('fs');
  await page.goto(base+'/catalog/dvernye-dovodchiki/');
  await page.locator('#sort-products').selectOption('name');await page.locator('#sort-products').selectOption('article');
  await page.waitForTimeout(380);
+ await page.waitForFunction(()=>document.querySelector('.catalog-products').getAttribute('aria-busy')!=='true');
  const articles=await page.locator('.catalog-products .product-article').allTextContents();
  assert.deepEqual(articles,[...articles].sort((a,b)=>a.localeCompare(b,'ru',{numeric:true})));
  assert.equal(await page.locator('.motion-exit, .motion-lightbox-exit').count(),0);

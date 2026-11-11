@@ -52,6 +52,8 @@ jobs:
           node scripts/browser_checks.cjs
           node scripts/map_checks.cjs
           node scripts/layout_checks.cjs
+          python3 scripts/seo_checks.py
+          node scripts/catalogue_checks.cjs
           node scripts/pdf_checks.cjs
           node scripts/motion_checks.cjs
           node scripts/price_checks.cjs

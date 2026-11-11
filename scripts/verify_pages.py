@@ -8,10 +8,10 @@ from lxml import html
 from sync_prices import validate_manifest, label
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-base = sys.argv[1] if len(sys.argv) > 1 else '/steklofurnitura'
+base = sys.argv[1] if len(sys.argv) > 1 else json.loads((ROOT/'scripts/site_config.json').read_text())['basePath'].rstrip('/')
 out = ROOT / (sys.argv[2] if len(sys.argv) > 2 else '.github-pages')
 for name in ['index.html', 'catalog.html', 'search.html', 'system/cart.html', 'contacts.html',
-             'app.js', 'style.css', 'products.json', '.nojekyll', '404.html']:
+             'app.js', 'style.css', 'products.json', 'sitemap.xml', 'robots.txt', '.nojekyll', '404.html']:
     assert (out / name).is_file(), f'Missing required output: {name}'
 assert 'наименований на складе' not in (out/'index.html').read_text(), 'Unconfirmed homepage inventory'
 source = json.loads((ROOT/'dist/products.json').read_text())

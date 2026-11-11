@@ -3564,3 +3564,21 @@ form.search input:focus-visible,.large-search input:focus-visible { outline:none
 #inquiry-contact-error { margin:0; padding:10px 12px; border-left:3px solid #f26935; border-radius:6px; background:#fff1e9; color:#1d232d; font-size:13px; line-height:1.5; }
 #inquiry .inquiry-fields [aria-invalid="true"] { border-color:#f26935; }
 @media(max-width:430px) { #inquiry .inquiry-contact-error-slot { min-height:82px; } }
+
+/* Catalogue controls preserve native navigation and the existing card rhythm. */
+.catalog-filters { display:flex; flex-wrap:wrap; align-items:flex-end; gap:12px; margin:16px 0 24px; padding:16px; border:1px solid var(--line); background:var(--soft); border-radius:8px; }
+.catalog-filters label { display:grid; gap:6px; font-size:13px; min-width:0; flex:1 1 180px; }
+.catalog-filters select { width:100%; min-height:44px; padding:8px 12px; border:1px solid var(--line); border-radius:6px; background:white; font-size:14px; }
+#catalog-reset { min-height:44px; padding:8px 12px; background:white; border:1px solid var(--line); border-radius:6px; }
+.catalog-paging { display:flex; flex-wrap:wrap; gap:8px; margin:24px 0; }
+.catalog-paging a { display:grid; place-items:center; min-width:44px; min-height:44px; border:1px solid var(--line); border-radius:6px; }
+.catalog-paging a[aria-current="page"] { background:var(--ink); color:white; }
+#catalog-more { margin-top:24px; min-height:48px; }
+#catalog-message { font-size:14px; line-height:1.5; }
+.catalog-products[aria-busy="true"] { opacity:.65; }
+.product-guarantee a { display:flex; align-items:center; gap:8px; text-decoration:underline; text-underline-offset:3px; }
+.catalog-products .product-article { overflow-wrap:anywhere; }
+@media(max-width:720px) { .catalog-filters label { flex-basis:100%; } #catalog-reset,#catalog-more { width:100%; } }
+
+.catalog-products { transition:opacity 180ms ease-out; }
+@media(prefers-reduced-motion:reduce) { .catalog-products { transition:none; } }
