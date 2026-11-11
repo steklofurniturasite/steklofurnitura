@@ -64,7 +64,7 @@ contact_text=route('/contacts.html').read_text()
 for s in ['+375 (29) 633-51-55','+375 (29) 633-51-20','steklofurnitura@mail.ru','steklofurnitura@gmail.com','Независимости, 177','Шафарнянская, 11','офис 30','09:00 - 18:00','09:00 - 17:00']:
     check(s in contact_text,'Missing contact '+s,'contacts')
 report={'checks':dict(checks),'failures':failures,'source_records':len(inv),'products':len(ps),'images_referenced':img_count,'missing_targets':dict(missing)}
-(ROOT/'research/verification.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
+# research/verification.json is the immutable migration baseline; current results are printed to CI.
 print(json.dumps({k:v for k,v in report.items() if k not in ['failures','missing_targets']},ensure_ascii=False,indent=2))
 if failures:
     print('FAILURES',len(failures));print('\n'.join(failures[:35]));sys.exit(1)

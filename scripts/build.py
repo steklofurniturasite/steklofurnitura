@@ -4,6 +4,7 @@ import copy, gzip, hashlib, html as escape, json, pathlib, re, shutil, urllib.pa
 from lxml import html, etree
 from functools import lru_cache
 from sync_prices import apply_prices
+import seo
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 if not (ROOT/'research/pages').exists() and (ROOT/'research/source-snapshot.json.gz').exists():
@@ -84,9 +85,10 @@ def footer():
     return f'''<footer><div class="wrap footer-lead"><span class="eyebrow">СТЕКЛОФУРНИТУРА / МИНСК</span><h2>Ваша идея.<br><span>Точное решение.</span></h2><a href="/contacts.html" class="button">Обсудить проект {icon("up")}</a></div><div class="wrap footer-grid"><div><a href="/" class="footer-brand">СТЕКЛО<span>ФУРНИТУРА</span></a><p>Фурнитура и крепления для стекла<br> и стеклянных конструкций.</p><a class="footer-download" href="{asset('/assets/catalog/Catalog SG 2023.pdf')}" target="_blank" rel="noopener">Скачать каталог 2023 {icon('download')}</a></div><div><h3>Компания</h3>{''.join(f'<a href="{u}">{n}</a>' for n,u in nav)}</div><div><h3>Полезная информация</h3>{''.join(f'<a href="{u}">{n}</a>' for n,u in info_nav)}</div><div><h3>Связаться с нами</h3><a class="footer-tel" href="tel:+375296335155">+375 (29) 633-51-55</a><span>Назар · юр. лица и опт</span><a href="mailto:steklofurnitura@mail.ru">steklofurnitura@mail.ru</a><a class="footer-tel" href="tel:+375296335120">+375 (29) 633-51-20</a><span>Виктория · физические лица</span><a href="mailto:steklofurnitura@gmail.com">steklofurnitura@gmail.com</a><a href="tel:+375173949470">+375 (17) 394-94-70 (71,72)</a></div></div><div class="wrap footer-bottom"><span>© 2009-2026, ООО «Стеклофурнитура»</span><span>Сайт не является интернет-магазином</span><a href="https://www.instagram.com/steklofurnitura/" target="_blank" rel="noopener">Instagram {icon('up')}</a></div></footer><div class="toast" role="status" aria-live="polite" hidden></div>'''
 
 def shell(title,body,active='',desc=''):
+    seo_route=active.removesuffix('index.html') if active.endswith('/index.html') else (active or '/')
     map_assets = (''
                   f'<script src="/map.js?v={static_version("map.js")}" defer></script>') if 'id="office-map"' in body else ''
-    return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="{esc(desc or 'ООО «Стеклофурнитура». Фурнитура для стекла DORMA, ТИТАН, HAG, StifGlass. Каталог, проекты и контакты в Минске.')} "><meta name="theme-color" content="#c54908"><title>{esc(title)} — Стеклофурнитура</title>{map_assets}<link rel="stylesheet" href="/style.css?v={static_version('style.css')}"><script src="/search.js?v={static_version('search.js')}" defer></script><script src="/app.js?v={static_version('app.js')}" defer></script></head><body>{header(active)}<main id="main">{body}</main>{footer()}</body></html>'''
+    return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#c54908">{seo.head(title,desc,seo_route,body,products.get(active) or products.get(seo_route))}{map_assets}<link rel="stylesheet" href="/style.css?v={static_version('style.css')}"><script src="/search.js?v={static_version('search.js')}" defer></script><script src="/app.js?v={static_version('app.js')}" defer></script></head><body>{header(active)}<main id="main">{body}</main>{footer()}</body></html>'''
 
 def clean(el):
     el=copy.deepcopy(el)
@@ -117,6 +119,10 @@ def clean(el):
             src=e.get('src','')
             if src.startswith('//'):e.set('src','https:'+src)
             e.set('loading','lazy');e.set('title',e.get('title') or 'Видеоруководство')
+    if el.xpath('.//a[contains(@href,"products.dorma.com/content/download/40565/447101/")]'):
+        note=etree.SubElement(el,'p',{'class':'document-note'})
+        note.text='Если внешний документ DORMA не открывается, запросите его у специалиста. '
+        link=etree.SubElement(note,'a',{'href':'/contacts.html'});link.text='Связаться с компанией'
     for table in el.xpath('.//table'):
         if 'layout-table' in table.get('class','').split():continue
         parent=table.getparent()
@@ -221,12 +227,23 @@ def parse_source(rec):
     return {'url':url,'title':title,'crumbs':crumbs,'tree':middle,'product':p,'source':rec['url'],'description':first(t.xpath('//meta[@name="description"]/@content')) or ''}
 
 def product_page(page,p):
-    photos=p.get('images',[])
-    primary=asset(photos[0] if photos else p['image'])
-    thumbs=''.join(f'<button class="product-thumb" data-image="{asset(src)}" aria-label="Изображение {i+1}" aria-pressed="{str(i==0).lower()}"><img src="{asset(src)}" alt="{esc(p["name"])}" loading="lazy"></button>' for i,src in enumerate(photos))
+    photos=[local for src in p.get('images',[]) if (local:=asset(src))]
+    if not photos:photos=[asset(p['image'])]
+    primary=photos[0]
+    thumbs=''.join(f'<button class="product-thumb" data-image="{src}" aria-label="Изображение {i+1}" aria-pressed="{str(i==0).lower()}"><img src="{src}" alt="{esc(p["name"])}" loading="lazy"></button>' for i,src in enumerate(photos))
     related=[x for u,x in products.items() if u.startswith(p['url'].rsplit('/',1)[0]+'/') and u!=p['url']][:4]
-    return f'''<div class="wrap">{breadcrumb(page['crumbs'])}<div class="product-heading"><div class="detail-identification"><span class="detail-article">Арт.: {esc(p["article"])}</span><button type="button" class="copy-article text-link" data-copy-article="{esc(p["article"])}" aria-label="Скопировать артикул {esc(p['article'])}">Копировать</button></div><h1>{esc(p["name"])}</h1></div><div class="product-layout"><div class="product-gallery"><a class="product-main-image" href="{primary}" data-lightbox aria-label="Увеличить изображение: {esc(p['name'])}"><img id="detail-photo" src="{primary}" alt="{esc(p['name'])}"><span class="zoom-label">{icon('search')} Увеличить</span></a><div class="product-thumbs">{thumbs}</div></div><div class="product-info"><span class="eyebrow">{esc(page['crumbs'][-2][0]) if len(page['crumbs'])>1 else 'КАТАЛОГ ПРОДУКЦИИ'}</span><h2 class="order-title">Стоимость и заказ</h2><div class="detail-spec"><span>Отделка</span><strong>{esc(p['finish'])}</strong></div><p class="product-stock">Наличие уточняется</p><div class="detail-price">{esc(p['price'] or 'Цену уточняйте')}<small class="price-note">Цена по последней сверке. Итоговую стоимость подтвердит менеджер.</small></div><div class="order-actions"><div class="qty"><button data-qty="-1" aria-label="Уменьшить количество">−</button><input type="number" id="quantity" min="1" max="99999" step="1" inputmode="numeric" value="1" aria-label="Количество"><button data-qty="1" aria-label="Увеличить количество">+</button></div><button class="button" data-product="{esc(p['url'])}">В заявку {icon('plus')}</button><span>{esc(p['unit'])}</span></div><a class="product-consult" href="/contacts.html">Нужна помощь с подбором? {icon('arrow')}</a><a class="detail-jump text-link" href="#product-description">Характеристики и документация {icon("arrow")}</a><div class="product-guarantee"><span>{icon('check')}12 месяцев гарантии</span><span>{icon('check')}Доставка по Беларуси</span></div></div></div><section class="product-description" id="product-description"><h2>Описание и характеристики</h2><div class="prose">{p['description'] or '<p>Подробную информацию уточняйте у наших специалистов.</p>'}</div></section>{('<section class="section"><div class="section-heading"><h2>В этой категории</h2></div><div class="product-grid">'+''.join(product_card(x) for x in related)+'</div></section>') if related else ''}</div>'''
+    return f'''<div class="wrap">{breadcrumb(page['crumbs'])}<div class="product-heading"><div class="detail-identification"><span class="detail-article">Арт.: {esc(p["article"])}</span><button type="button" class="copy-article text-link" data-copy-article="{esc(p["article"])}" aria-label="Скопировать артикул {esc(p['article'])}">Копировать</button></div><h1>{esc(p["name"])}</h1></div><div class="product-layout"><div class="product-gallery"><a class="product-main-image" href="{primary}" data-lightbox aria-label="Увеличить изображение: {esc(p['name'])}"><img id="detail-photo" src="{primary}" alt="{esc(p['name'])}"><span class="zoom-label">{icon('search')} Увеличить</span></a><div class="product-thumbs">{thumbs}</div></div><div class="product-info"><span class="eyebrow">{esc(page['crumbs'][-2][0]) if len(page['crumbs'])>1 else 'КАТАЛОГ ПРОДУКЦИИ'}</span><h2 class="order-title">Стоимость и заказ</h2><div class="detail-spec"><span>Отделка</span><strong>{esc(p['finish'])}</strong></div><p class="product-stock">Наличие уточняется</p><div class="detail-price">{esc(p['price'] or 'Цену уточняйте')}<small class="price-note">Стоимость и наличие подтвердит менеджер.</small></div><div class="order-actions"><div class="qty"><button data-qty="-1" aria-label="Уменьшить количество">−</button><input type="number" id="quantity" min="1" max="99999" step="1" inputmode="numeric" value="1" aria-label="Количество"><button data-qty="1" aria-label="Увеличить количество">+</button></div><button class="button" data-product="{esc(p['url'])}">В заявку {icon('plus')}</button><span>{esc(p['unit'])}</span></div><a class="product-consult" href="/contacts.html">Нужна помощь с подбором? {icon('arrow')}</a><a class="detail-jump text-link" href="#product-description">Характеристики и документация {icon("arrow")}</a><div class="product-guarantee"><a href="/index/usloviya-sohraneniya-garantii.html">Условия гарантии {icon('arrow')}</a><a href="/oplata-i-dostavka.html">Оплата и доставка {icon('arrow')}</a></div></div></div><section class="product-description" id="product-description"><h2>Описание и характеристики</h2><div class="prose">{p['description'] or '<p>Подробную информацию уточняйте у наших специалистов.</p>'}</div></section>{('<section class="section"><div class="section-heading"><h2>В этой категории</h2></div><div class="product-grid">'+''.join(product_card(x) for x in related)+'</div></section>') if related else ''}</div>'''
 
+catalog_extra_pages=[]
+product_brands={}
+def catalogue_brand(p):
+    aliases={'titan':'Titan','титан':'Titan','dorma':'DORMA','dormakaba':'DORMA','hag':'HAG','stifglass':'StifGlass'}
+    context=product_brands.get(p['url'],'')
+    for value in [p['article'],p['name'],context]:
+        words=re.findall(r'[\w]+',re.sub(r'stif\s+glass','stifglass',value.lower()))
+        for word in words:
+            if word in aliases:return aliases[word]
+    return ''
 def catalog_page(page):
     url=page['url'];t=page['tree']
     src_cards=[card_data(c) for c in xp(t,'cat-item')];src_cards=[p for p in src_cards if p]
@@ -245,7 +262,31 @@ def catalog_page(page):
     for e in content.xpath('.//h2'):
         if txt(e) in ['Товары','Бренды','Вы смотрели']:e.drop_tree()
     extra=clean(content)
-    return f'''<div class="wrap">{breadcrumb(page['crumbs'])}{page_title(page['title'],'КАТАЛОГ ПРОДУКЦИИ')}<div class="catalog-layout">{sidebar(url)}<div class="catalog-results">{serieshtml}<div class="catalog-toolbar"><span>Товары <b>{len(listing)}</b></span><label>Сортировка <select id="sort-products"><option value="default">По умолчанию</option><option value="name">По названию</option><option value="article">По артикулу</option></select></label></div><div class="product-grid catalog-products">{''.join(product_card(p) for p in listing)}</div><div class="prose catalog-description">{extra}</div></div></div></div>'''
+    count=len(listing);large=count>30
+    payload=''
+    if large:
+        key=hashlib.sha256(url.encode()).hexdigest()[:16]
+        directory=DIST/'catalog-data';directory.mkdir(exist_ok=True)
+        members=json.dumps([{'url':p['url'],'brand':catalogue_brand(p)} for p in listing],ensure_ascii=False,separators=(',',':'))
+        payload=f'/catalog-data/{key}.json?v={hashlib.sha256(members.encode()).hexdigest()[:12]}'
+        (directory/f'{key}.json').write_text(members)
+    controls=''
+    if large:
+        for field,label,values in [('brand','Бренд',sorted(set(catalogue_brand(p) for p in listing)-{''})),('finish','Отделка',sorted(set(p['finish'] for p in listing)-{''}))]:
+            if values:controls+=f'<label>{label}<select data-catalog-filter="{field}"><option value="">Все</option>'+''.join(f'<option value="{esc(v)}">{esc(v)}</option>' for v in values)+'</select></label>'
+        controls='<div class="catalog-filters">'+controls+'<button type="button" class="text-link" id="catalog-reset">Сбросить фильтры</button></div>'
+    total=(count+29)//30 if large else 1
+    routes=[url]+[(url+f'page-{i}.html' if url.endswith('/') else url[:-5]+f'/page-{i}.html') for i in range(2,total+1)]
+    def render(number):
+        subset=listing[(number-1)*30:number*30] if large else listing
+        paging=''
+        if large:
+            paging='<nav class="catalog-paging" aria-label="Страницы категории">'+''.join(f'<a href="{esc(route)}"'+(' aria-current="page"' if i==number else '')+f'>{i}</a>' for i,route in enumerate(routes,1))+'</nav>'
+        more='<button type="button" class="button" id="catalog-more" hidden>Показать ещё</button><p id="catalog-message" role="status"></p>' if large else ''
+        attrs=f' data-catalog-source="{payload}" data-catalog-start="{(number-1)*30}"' if large else ''
+        return f'''<div class="wrap">{breadcrumb(page['crumbs'])}{page_title(page['title']+(f' · Страница {number}' if number>1 else ''),'КАТАЛОГ ПРОДУКЦИИ')}<div class="catalog-layout">{sidebar(url)}<div class="catalog-results"{attrs}>{serieshtml if number==1 else ''}<div class="catalog-toolbar"><span id="catalog-count" role="status">Товары <b>{count}</b> · Показано {len(subset)}</span><label>Сортировка <select id="sort-products"><option value="default">По умолчанию</option><option value="name">По названию</option><option value="article">По артикулу</option></select></label></div>{controls}<div class="product-grid catalog-products">{''.join(product_card(p) for p in subset)}</div>{more}{paging}<div class="prose catalog-description">{extra if number==1 else ''}</div></div></div></div>'''
+    for number,route in enumerate(routes[1:],2):catalog_extra_pages.append((route,page['title']+f' · Страница {number}',render(number)))
+    return render(1)
 
 def contacts_page():
     return f'''<div class="wrap">{breadcrumb([('Контакты','/contacts.html')])}{page_title('Будем на связи','КОНТАКТЫ')}<div class="contacts-grid"><section class="contact-person"><span class="eyebrow">ЮР. ЛИЦА И ОПТОВЫЕ ПРОДАЖИ</span><h2>Назар</h2><a class="contact-tel" href="tel:+375296335155">+375 (29) 633-51-55</a><a href="mailto:steklofurnitura@mail.ru">steklofurnitura@mail.ru {icon('up')}</a><p>+375 (17) 394-94-70 (72) — гор./факс</p><div class="messengers"><a href="viber://chat?number=%2B375296335155">Viber</a><a href="https://wa.me/375296335155" target="_blank" rel="noopener">WhatsApp</a><a href="https://t.me/+375296335155" target="_blank" rel="noopener">Telegram</a></div></section><section class="contact-person"><span class="eyebrow">ФИЗИЧЕСКИЕ ЛИЦА</span><h2>Виктория</h2><a class="contact-tel" href="tel:+375296335120">+375 (29) 633-51-20</a><a href="mailto:steklofurnitura@gmail.com">steklofurnitura@gmail.com {icon('up')}</a><p>+375 (17) 394-94-70 (72) — гор./факс</p><div class="messengers"><a href="viber://chat?number=%2B375296335120">Viber</a><a href="https://t.me/+375296335120" target="_blank" rel="noopener">Telegram</a></div></section></div><div class="address-grid"><div><span class="eyebrow">ПРИЕЗЖАЙТЕ В ГОСТИ</span><h2>Офис и склад в Минске</h2><h3>ОФИС</h3><p>220125, РБ, г.Минск, пр-т Независимости, 177 (БЦ "ПОРТ"), 3 секция, 2 этаж, офис 30</p><h3>СКЛАД</h3><p>г.Минск, ул.Шафарнянская, 11 (соседнее от офиса здание)</p><h3>Режим работы</h3><dl class="hours"><dt>ПН-ЧТ</dt><dd>09:00 - 18:00</dd><dt>ПТ</dt><dd>09:00 - 17:00</dd><dt>СБ, ВС</dt><dd>выходной</dd></dl><a class="button" href="https://yandex.by/maps/?rtext=~53.945793%2C27.682951&rtt=auto" target="_blank" rel="noopener">Построить маршрут {icon('up')}</a></div><div class="map-panel"><div id="office-map" class="office-map" role="region" aria-label="Интерактивная карта офиса в Минске" data-lat="53.945793" data-lng="27.682951"></div><button class="map-reset" type="button" hidden>К офису</button><div class="map-address"><strong>Стеклофурнитура · БЦ «ПОРТ»</strong><p>пр-т Независимости, 177 · офис 30</p><a class="text-link" href="https://yandex.by/maps/?rtext=~53.945793%2C27.682951&rtt=auto" target="_blank" rel="noopener">Построить маршрут {icon('up')}</a></div><p class="map-status" role="status">Карта загрузится при прокрутке. Адрес и маршрут доступны выше.</p></div></div></div>'''
@@ -296,6 +337,11 @@ if __name__=='__main__':
     for name in ['style.css','app.js','map.js','search.js']:
         shutil.copyfile(STATIC/name,DIST/name)
     shutil.copytree(STATIC/'vendor',DIST/'vendor',dirs_exist_ok=True)
+    pagination_manifest=DIST/'catalog-pages.json'
+    if pagination_manifest.exists():
+        for old in json.loads(pagination_manifest.read_text()):
+            target=DIST/old.lstrip('/')
+            if re.search(r'/page-\d+\.html$',old) and DIST.resolve() in target.resolve().parents:target.unlink(missing_ok=True)
     records=read_records();pages=[]
     for r in records:
         if not r.get('file'):continue
@@ -317,6 +363,7 @@ if __name__=='__main__':
     price_file=ROOT/'data/prices.json'
     if not price_file.exists(): raise RuntimeError('Missing verified prices; run scripts/sync_prices.py --apply first')
     apply_prices(products,json.loads(price_file.read_text()))
+    product_brands.update({p['url']:' '.join(n for n,u in p['crumbs'][:-1]) for p in pages if p['product']})
     write_page('/','Фурнитура для стеклянных конструкций',home_page())
     write_page('/catalog.html','Каталог продукции',all_catalog())
     for page in pages:
@@ -326,6 +373,7 @@ if __name__=='__main__':
         elif url.startswith('/catalog/') and (xp(page['tree'],'cat-item') or xp(page['tree'],'series-items')):body=catalog_page(page)
         else:body=generic_page(page)
         write_page(url,page['title'],body,page['description'])
+    for route,title,body in catalog_extra_pages:write_page(route,title,body)
     write_page('/contacts.html','Контакты',contacts_page())
     write_page('/gallery.html','Галерея проектов',gallery_page())
     write_page('/system/cart.html','Ваш заказ',cart_page())
@@ -339,6 +387,8 @@ if __name__=='__main__':
         index.append({k:v for k,v in p.items() if k not in ['description','images'] }|{'image':asset(p['image']), 'route':p['url']})
     (DIST/'products.json').write_text(json.dumps(index,ensure_ascii=False,separators=(',',':')))
     (ROOT/'research/asset-urls.json').write_text(json.dumps(sorted(ASSETS),ensure_ascii=False,indent=2))
+    pagination_manifest.write_text(json.dumps([route for route,title,body in catalog_extra_pages]))
+    seo.write_maps(DIST)
     page_count=sum(1 for _ in DIST.rglob('*.html'))
-    (ROOT/'research/build-report.json').write_text(json.dumps({'source_records':len(records),'pages':page_count,'products':len(products),'categories':len(categories),'assets':len(ASSETS),'source_urls':[p['url'] for p in pages]},ensure_ascii=False,indent=2))
+    (ROOT/'research/build-report.json').write_text(json.dumps({'source_records':len(records),'pages':page_count-len(catalog_extra_pages),'products':len(products),'categories':len(categories),'assets':len(ASSETS),'source_urls':[p['url'] for p in pages]},ensure_ascii=False,indent=2))
     print('BUILT',page_count,'pages;',len(products),'products;',len(categories),'categories;',len(ASSETS),'assets',flush=True)

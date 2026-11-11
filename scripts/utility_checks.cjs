@@ -30,6 +30,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   const category=target.url.slice(0,target.url.lastIndexOf('/')+1);
   await page.goto(base+category);await page.selectOption('#sort-products','article');await page.reload();
   assert.equal(await page.locator('#sort-products').inputValue(),'article');
+  await page.waitForFunction(()=>document.querySelector('.catalog-products').getAttribute('aria-busy')!=='true');
   const articles=await page.locator('.catalog-products .product-article').allTextContents();
   assert.deepEqual(articles,[...articles].sort((a,b)=>a.localeCompare(b,'ru',{numeric:true})));
   await page.selectOption('#sort-products','default');await page.reload();assert.equal(await page.locator('#sort-products').inputValue(),'default');

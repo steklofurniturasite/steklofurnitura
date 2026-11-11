@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+# Test deployment: HTML meta robots is noindex,follow. Do not submit this sitemap.

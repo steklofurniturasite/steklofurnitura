@@ -996,8 +996,50 @@
   });
 
 
+  const catalogRoot=$('[data-catalog-source]');
+  let catalogPromise,catalogRows,catalogStart=Number(catalogRoot?.dataset.catalogStart||0),catalogLimit=30,catalogRevision=0;
+  function catalogueRows() {
+    if(!catalogPromise)catalogPromise=Promise.all([getProducts(),fetch(catalogRoot.dataset.catalogSource).then(response=>{if(!response.ok)throw Error('Категория недоступна');return response.json();})])
+      .then(([products,members])=>{const lookup=new Map(products.map(p=>[p.url,p]));return members.map((entry,index)=>{const product=lookup.get(entry.url);if(!product)throw Error('Товар категории недоступен');return {product,brand:entry.brand,index};});})
+      .catch(error=>{catalogPromise=undefined;throw error;});
+    return catalogPromise;
+  }
+  async function updateCatalogue(append=false,requestedLimit=catalogLimit) {
+    const revision=++catalogRevision,grid=$('.catalog-products'),message=$('#catalog-message');
+    const oldCount=$$('.product-card',grid).length;
+    grid.setAttribute('aria-busy','true');$('#catalog-more').disabled=true;message.textContent='Загружаем товары…';
+    try {
+      catalogRows=await catalogueRows();if(revision!==catalogRevision)return;
+      const filters=Object.fromEntries($$('[data-catalog-filter]').map(select=>[select.dataset.catalogFilter,select.value]));
+      const rows=catalogRows.filter(row=>(!filters.brand||row.brand===filters.brand)&&(!filters.finish||row.product.finish===filters.finish));
+      const key=$('#sort-products').value;
+      rows.sort((a,b)=>key==='default'?a.index-b.index:a.product[key==='name'?'name':'article'].localeCompare(b.product[key==='name'?'name':'article'],'ru',{numeric:true})||a.index-b.index);
+      if(!append){catalogStart=0;requestedLimit=30;grid.replaceChildren();}
+      const visible=rows.slice(catalogStart,catalogStart+requestedLimit),next=append?visible.slice(oldCount):visible;
+      const container=document.createElement('div');container.innerHTML=next.map(row=>productCard(row.product)).join('');
+      const added=[...container.children];grid.append(...added);
+      if(!visible.length)grid.innerHTML='<div class="empty-state"><h2>Ничего не найдено</h2><p>Измените фильтры или нажмите «Сбросить фильтры».</p></div>';
+      catalogLimit=requestedLimit;
+      $('#catalog-count').textContent=`Товары ${rows.length} · Показано ${visible.length}`;
+      $('#catalog-more').hidden=catalogStart+catalogLimit>=rows.length;
+      message.textContent='';
+      added.filter(card=>card.getBoundingClientRect().top<innerHeight+80).slice(0,6).forEach(card=>animateUI(card,[{opacity:.5,transform:'translateY(5px)'},{opacity:1,transform:'translateY(0)'}],{duration:220}));
+      if(append)$('h3 a',added[0]||grid)?.focus({preventScroll:true});
+    }catch{
+      if(revision!==catalogRevision)return;
+      message.replaceChildren(document.createTextNode('Не удалось загрузить категорию. Статические страницы доступны ниже. '));
+      const retry=document.createElement('button');retry.type='button';retry.className='text-link';retry.textContent='Повторить';retry.onclick=()=>updateCatalogue(append,requestedLimit);message.append(retry);
+    }finally{if(revision===catalogRevision){grid.setAttribute('aria-busy','false');$('#catalog-more').disabled=false;}}
+  }
+  if(catalogRoot){
+    const more=$('#catalog-more');more.hidden=!$('.catalog-paging a[aria-current="page"]')?.nextElementSibling;
+    more.addEventListener('click',()=>updateCatalogue(true,catalogLimit+30));
+    $$('[data-catalog-filter]').forEach(select=>select.addEventListener('change',()=>updateCatalogue()));
+    $('#catalog-reset').addEventListener('click',()=>{$$('[data-catalog-filter]').forEach(select=>select.value='');updateCatalogue();});
+  }
   const sortControl = $('#sort-products');
   sortControl?.addEventListener('change', event => {
+    if(catalogRoot){try{sessionStorage.setItem('steklofurnitura-sort',event.target.value);}catch{}updateCatalogue();return;}
     const grid = $('.catalog-products');
     if (!grid) return;
     const cards = $$('.product-card', grid);

@@ -6,7 +6,7 @@ import re
 import shutil
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--base-path', default='/steklofurnitura')
+parser.add_argument('--base-path', default=json.loads((Path(__file__).resolve().parents[1]/'scripts/site_config.json').read_text())['basePath'])
 parser.add_argument('--output', default='.github-pages')
 args = parser.parse_args()
 base = '/' + args.base_path.strip('/') if args.base_path.strip('/') else ''
