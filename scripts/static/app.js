@@ -221,7 +221,7 @@
   function toast(message, withCartLink = false) {
     const element = $('.toast');
     if (!element) return;
-    element.classList.toggle('inquiry-toast',!!$('#cart-content')||withCartLink);
+    element.classList.toggle('inquiry-toast',!!$('#cart-content')||!!$('.product-layout')||withCartLink);
     const wasVisible = !element.hidden;
     const currentStyle = getComputedStyle(element);
     const fromOpacity = wasVisible ? Number(currentStyle.opacity) : 0;
@@ -941,12 +941,14 @@
   $('[data-copy-article]')?.addEventListener('click', async event => {
     const button=event.currentTarget;
     if (button.disabled) return;
+    clearTimeout(addedTimers.get(button));if(!buttonLabels.has(button))buttonLabels.set(button,button.innerHTML);
     button.disabled=true;
     try {
       await navigator.clipboard.writeText(button.dataset.copyArticle);
+      button.textContent='Скопировано ✓';
       toast('Артикул скопирован: '+button.dataset.copyArticle);
-    } catch { toast('Не удалось скопировать. Выделите артикул и скопируйте вручную.'); }
-    finally { button.disabled=false; }
+    } catch { button.textContent='Повторить';toast('Не удалось скопировать. Выделите артикул и скопируйте вручную.'); }
+    finally { button.disabled=false;addedTimers.set(button,setTimeout(()=>{button.innerHTML=buttonLabels.get(button);},2200)); }
   });
   $('#print-inquiry')?.addEventListener('click', () => window.print());
   // Self-contained PDF export: canvas embeds Cyrillic without external fonts or libraries.
@@ -997,6 +999,46 @@
 
 
   const catalogRoot=$('[data-catalog-source]');
+  const catalogPanel=$('.catalog-results'),catalogStateKey=`steklofurnitura-category:${location.pathname}`;
+  let catalogAnchor=null;
+  function rememberCatalogue() {
+    if(!catalogPanel)return;
+    const cards=$$('.catalog-products .product-card');
+    const anchor=catalogAnchor||cards.find(card=>card.getBoundingClientRect().bottom>120)||cards[0];
+    const state={path:location.pathname,sort:$('#sort-products')?.value||'default',
+      filters:Object.fromEntries($$('[data-catalog-filter]').map(select=>[select.dataset.catalogFilter,select.value])),
+      limit:catalogLimit,start:catalogStart,scroll:scrollY,
+      anchor:anchor?$('h3 a',anchor)?.getAttribute('href'):null,offset:anchor?.getBoundingClientRect().top||0};
+    try{sessionStorage.setItem(catalogStateKey,JSON.stringify(state));}catch{}
+    try{history.replaceState({...history.state,catalogue:state},'');}catch{}
+  }
+  function restoreCataloguePosition(state) {
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      const card=$$('.catalog-products .product-card').find(card=>$('h3 a',card)?.getAttribute('href')===state.anchor);
+      const target=card?scrollY+card.getBoundingClientRect().top-Number(state.offset||0):Number(state.scroll||0);
+      scrollTo({top:Math.max(0,Number.isFinite(target)?target:0),behavior:'instant'});
+    }));
+  }
+  if(catalogPanel){
+    window.addEventListener('pagehide',rememberCatalogue);
+    catalogPanel.addEventListener('pointerdown',event=>{catalogAnchor=event.target.closest('.product-card');});
+    catalogPanel.addEventListener('click',event=>{if(event.target.closest('.product-card a')){catalogAnchor=event.target.closest('.product-card');rememberCatalogue();}});
+  }
+  function renderCatalogueChips() {
+    const chips=$('#catalog-chips');if(!chips)return;
+    const focused=document.activeElement?.dataset.catalogChip;
+    chips.replaceChildren();
+    $$('[data-catalog-filter]').filter(select=>select.value).forEach(select=>{
+      const button=document.createElement('button');button.type='button';button.dataset.catalogChip=select.dataset.catalogFilter;
+      const label=select.dataset.catalogFilter==='brand'?'Бренд':'Отделка';
+      button.textContent=`${label}: ${select.value} ×`;button.setAttribute('aria-label',`Снять фильтр ${label}: ${select.value}`);
+      button.onclick=()=>{select.value='';updateCatalogue().then(()=>select.focus());};chips.append(button);
+    });
+    chips.hidden=!chips.children.length;
+    if(focused)$('#catalog-reset')?.focus({preventScroll:true});
+  }
+  const catalogueWord=n=>n%10===1&&n%100!==11?'товар':([2,3,4].includes(n%10)&&![12,13,14].includes(n%100)?'товара':'товаров');
+
   let catalogPromise,catalogRows,catalogStart=Number(catalogRoot?.dataset.catalogStart||0),catalogLimit=30,catalogRevision=0;
   function catalogueRows() {
     if(!catalogPromise)catalogPromise=Promise.all([getProducts(),fetch(catalogRoot.dataset.catalogSource).then(response=>{if(!response.ok)throw Error('Категория недоступна');return response.json();})])
@@ -1004,7 +1046,7 @@
       .catch(error=>{catalogPromise=undefined;throw error;});
     return catalogPromise;
   }
-  async function updateCatalogue(append=false,requestedLimit=catalogLimit) {
+  async function updateCatalogue(append=false,requestedLimit=catalogLimit,restoreState=null) {
     const revision=++catalogRevision,grid=$('.catalog-products'),message=$('#catalog-message');
     const oldCount=$$('.product-card',grid).length;
     grid.setAttribute('aria-busy','true');$('#catalog-more').disabled=true;message.textContent='Загружаем товары…';
@@ -1014,21 +1056,29 @@
       const rows=catalogRows.filter(row=>(!filters.brand||row.brand===filters.brand)&&(!filters.finish||row.product.finish===filters.finish));
       const key=$('#sort-products').value;
       rows.sort((a,b)=>key==='default'?a.index-b.index:a.product[key==='name'?'name':'article'].localeCompare(b.product[key==='name'?'name':'article'],'ru',{numeric:true})||a.index-b.index);
-      if(!append){catalogStart=0;requestedLimit=30;grid.replaceChildren();}
+      if(!append){if(!restoreState){catalogStart=0;requestedLimit=30;}else catalogStart=Math.max(0,Math.min(Number(restoreState.start)||0,Math.max(0,rows.length-1)));grid.replaceChildren();}
+      requestedLimit=Math.max(30,Math.min(Number.isFinite(requestedLimit)?requestedLimit:30,Math.max(30,rows.length)));
       const visible=rows.slice(catalogStart,catalogStart+requestedLimit),next=append?visible.slice(oldCount):visible;
       const container=document.createElement('div');container.innerHTML=next.map(row=>productCard(row.product)).join('');
       const added=[...container.children];grid.append(...added);
-      if(!visible.length)grid.innerHTML='<div class="empty-state"><h2>Ничего не найдено</h2><p>Измените фильтры или нажмите «Сбросить фильтры».</p></div>';
+      if(!visible.length){
+        grid.innerHTML=catalogRows.length?'<div class="empty-state"><h2>По выбранным фильтрам ничего не найдено</h2><p>Снимите один фильтр или сбросьте все.</p><button class="button" type="button" data-catalog-clear>Сбросить фильтры</button></div>':'<div class="empty-state"><h2>В этой категории пока нет товаров</h2><p>Посмотрите другие разделы или обратитесь за консультацией.</p><a href="/catalog.html" class="button">Каталог</a> <a href="/contacts.html">Консультация</a></div>';
+        $('[data-catalog-clear]',grid)?.addEventListener('click',()=>$('#catalog-reset').click());
+      }
       catalogLimit=requestedLimit;
-      $('#catalog-count').textContent=`Товары ${rows.length} · Показано ${visible.length}`;
+      $('#catalog-count').replaceChildren();
+      const total=document.createElement('strong'),shown=document.createElement('small');total.textContent=`Найдено ${rows.length} ${catalogueWord(rows.length)}`;shown.textContent=`Показано ${visible.length} из ${rows.length}`;$('#catalog-count').append(total,shown);
+      renderCatalogueChips();
       $('#catalog-more').hidden=catalogStart+catalogLimit>=rows.length;
       message.textContent='';
       added.filter(card=>card.getBoundingClientRect().top<innerHeight+80).slice(0,6).forEach(card=>animateUI(card,[{opacity:.5,transform:'translateY(5px)'},{opacity:1,transform:'translateY(0)'}],{duration:220}));
       if(append)$('h3 a',added[0]||grid)?.focus({preventScroll:true});
+      catalogAnchor=null;
+      if(restoreState)restoreCataloguePosition(restoreState);else rememberCatalogue();
     }catch{
       if(revision!==catalogRevision)return;
       message.replaceChildren(document.createTextNode('Не удалось загрузить категорию. Статические страницы доступны ниже. '));
-      const retry=document.createElement('button');retry.type='button';retry.className='text-link';retry.textContent='Повторить';retry.onclick=()=>updateCatalogue(append,requestedLimit);message.append(retry);
+      const retry=document.createElement('button');retry.type='button';retry.className='text-link';retry.textContent='Повторить';retry.onclick=()=>updateCatalogue(append,requestedLimit,restoreState);message.append(retry);
     }finally{if(revision===catalogRevision){grid.setAttribute('aria-busy','false');$('#catalog-more').disabled=false;}}
   }
   if(catalogRoot){
@@ -1053,17 +1103,19 @@
       return $(selector, a).textContent.localeCompare($(selector, b).textContent, 'ru', { numeric: true });
     });
     grid.append(...cards);
-    animatePositions(before, cards);
+    animatePositions(before, cards);rememberCatalogue();
   });
 
-  if (sortControl) {
-    try {
-      const saved=sessionStorage.getItem('steklofurnitura-sort');
-      if (['name','article'].includes(saved)) {
-        sortControl.value=saved;
-        sortControl.dispatchEvent(new Event('change'));
-      }
-    } catch {}
+  if(sortControl){
+    try{
+      const saved=history.state?.catalogue?.path===location.pathname?history.state.catalogue:JSON.parse(sessionStorage.getItem(catalogStateKey)||'null');
+      if(saved&&saved.path===location.pathname){
+        $$('[data-catalog-filter]').forEach(select=>{const value=saved.filters?.[select.dataset.catalogFilter];select.value=[...select.options].some(option=>option.value===value)?value:'';});
+        sortControl.value=['default','name','article'].includes(saved.sort)?saved.sort:'default';
+        if(catalogRoot)updateCatalogue(false,Math.max(30,Number(saved.limit)||30),saved);
+        else {sortControl.dispatchEvent(new Event('change'));restoreCataloguePosition(saved);}
+      }else{sortControl.value='default';}
+    }catch{}
   }
 
   window.addEventListener('storage', event => {

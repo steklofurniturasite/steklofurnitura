@@ -11,11 +11,11 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   await page.goto(base+target.url);
   await page.locator('[data-copy-article]').click();
   await page.waitForFunction(()=>document.querySelector('.toast')?.textContent.includes('Артикул скопирован'));
-  assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),target.article);
+  assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),target.article);assert.equal(await page.locator('[data-copy-article]').innerText(),'Скопировано ✓');
   await page.evaluate(()=>{navigator.clipboard.writeText=()=>Promise.reject(new Error('denied'));});
   await page.locator('[data-copy-article]').click();
   await page.waitForFunction(()=>document.querySelector('.toast')?.textContent.includes('Не удалось скопировать'));
-  assert.equal(await page.locator('[data-copy-article]').isEnabled(),true);
+  assert.equal(await page.locator('[data-copy-article]').isEnabled(),true);assert.equal(await page.locator('[data-copy-article]').innerText(),'Повторить');
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   await page.locator('.product-main-image').click();
   const swipe=async(dx,dy)=>page.locator('.lightbox img').evaluate((el,{dx,dy})=>{
