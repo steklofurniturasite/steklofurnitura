@@ -40,7 +40,12 @@ jobs:
       - name: Browser regression tests
         run: |
           mkdir -p /tmp/preview
-          ln -s "$GITHUB_WORKSPACE/.github-pages" /tmp/preview/steklofurnitura
+          preview_dir="$GITHUB_WORKSPACE/.github-pages"
+          if [ "$(python3 -c 'import json; print(json.load(open("scripts/site_config.json"))["basePath"].rstrip("/"))')" != "/steklofurnitura" ]; then
+            python3 scripts/prepare_github_pages.py --base-path /steklofurnitura --output .browser-preview
+            preview_dir="$GITHUB_WORKSPACE/.browser-preview"
+          fi
+          ln -s "$preview_dir" /tmp/preview/steklofurnitura
           python3 -m http.server 8000 --directory /tmp/preview >/tmp/preview.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid"' EXIT
